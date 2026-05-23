@@ -27,15 +27,18 @@
 
         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 mb-2">Main Menu</p>
 
-        <a asp-controller="Dashboard" asp-action="Index"
+        <a asp-controller="@(isAdmin ? "Admin" : "Dashboard")" asp-action="Index"
                class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition">
             🏠 Dashboard
         </a>
 
+        @if (!isAdmin)
+        {
         <a asp-controller="Course" asp-action="Index"
                class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition">
             📖 Courses
         </a>
+        }
 
         @if (isStudent)
         {
@@ -56,7 +59,7 @@
             </a>
         }
 
-        @if (isInstructor || isAdmin)
+        @if (isInstructor)
         {
 
             <a asp-controller="Quiz" asp-action="Index"

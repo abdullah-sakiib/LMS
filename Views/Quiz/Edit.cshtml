@@ -17,6 +17,7 @@
   .btn-primary { background:linear-gradient(135deg,#4f46e5,#6366f1); }
 </style>
 <div class="max-w-5xl mx-auto space-y-5">
+  @Html.AntiForgeryToken()
   <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-wrap justify-between gap-4">
     <div><h2 class="text-lg font-bold text-slate-800">@Model.Title</h2><p class="text-sm text-slate-500">@Model.Course?.Title | @Model.Questions.Count questions | @Model.TotalMarks marks | @Model.TimerMinutes minutes</p></div>
     <div class="flex gap-2"><a asp-action="Index" asp-route-courseId="@Model.CourseId" class="text-sm font-medium text-slate-600 border border-slate-200 px-4 py-2 rounded-xl">Back to Quizzes</a><a asp-action="Results" asp-route-id="@Model.Id" class="text-sm font-medium text-indigo-600 border border-indigo-200 px-4 py-2 rounded-xl">View Attempts</a></div>
@@ -89,7 +90,7 @@
       questions.push({ questionText, type: card.dataset.type, options, correctOptionIndex });
     }
     if (!questions.length) { alert('Add at least one question.'); return; }
-    const response = await fetch(`/Quiz/Edit/${quizId}`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ courseId, title:document.getElementById('quizTitle').value.trim(), totalMarks:parseInt(document.getElementById('quizMarks').value), timerMinutes:parseInt(document.getElementById('quizTimer').value), questions }) });
+    const response = await fetch(`/Quiz/Edit/${quizId}`, { method:'POST', headers:{ 'Content-Type':'application/json', 'RequestVerificationToken':document.querySelector('input[name=__RequestVerificationToken]').value }, body:JSON.stringify({ courseId, title:document.getElementById('quizTitle').value.trim(), totalMarks:parseInt(document.getElementById('quizMarks').value), timerMinutes:parseInt(document.getElementById('quizTimer').value), questions }) });
     if (response.ok) window.location.href = `/Quiz/Index?courseId=${courseId}`; else alert(await response.text());
   }
 </script>

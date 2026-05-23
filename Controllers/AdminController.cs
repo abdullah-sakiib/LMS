@@ -54,8 +54,6 @@ public class AdminController : Controller
             TotalUsers = await _userManager.Users.CountAsync(),
             TotalCourses = await _db.Courses.CountAsync(),
             TotalEnrollments = await _db.Enrollments.CountAsync(),
-            TotalSubmissions = await _db.AssignmentSubmissions.CountAsync(),
-            TotalQuizAttempts = await _db.QuizAttempts.CountAsync(),
             Students = students.Count,
             Instructors = instructors.Count,
             RegistrationsByDay = Enumerable.Range(0, 7)

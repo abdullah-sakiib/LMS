@@ -17,6 +17,9 @@
     var action = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
     var onDashboard = (controller == "Dashboard" || controller == "Admin") && action == "Index";
     var onCourses = controller == "Course" || controller == "Content";
+    var onCourseCatalog = controller == "Course" && action == "Index";
+    var onMyCourses = controller == "Course" && action == "MyCourses";
+    var onCourseContent = controller == "Course" && action == "Content";
     var onCreateCourse = controller == "Course" && action == "Create";
     var onRequests = controller == "Enrollment";
     var onSubmissions = controller == "Grade" && action == "Submissions";
@@ -125,10 +128,22 @@
       <a asp-controller="@dashboardController" asp-action="Index" class="nav-item @(onDashboard ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all">
         <i class="nav-icon ri-dashboard-line text-xl flex-shrink-0"></i><span class="nav-label text-sm font-medium">Dashboard</span><span class="nav-tooltip">Dashboard</span>
       </a>
-      <a asp-controller="Course" asp-action="Index" class="nav-item @(onCourses && !onCreateCourse ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all">
-        <i class="nav-icon ri-book-open-line text-xl flex-shrink-0"></i><span class="nav-label text-sm font-medium">@(isStudent ? "Course Catalog" : "My Courses")</span><span class="nav-tooltip">Courses</span>
-      </a>
-      @if (isInstructor || isAdmin)
+      @if (isStudent)
+      {
+        <a asp-controller="Course" asp-action="Index" class="nav-item @(onCourseCatalog ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all">
+          <i class="nav-icon ri-book-open-line text-xl flex-shrink-0"></i><span class="nav-label text-sm font-medium">Course Catalog</span><span class="nav-tooltip">Course Catalog</span>
+        </a>
+        <a asp-controller="Course" asp-action="MyCourses" class="nav-item @((onMyCourses || onCourseContent) ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all">
+          <i class="nav-icon ri-book-2-line text-xl flex-shrink-0"></i><span class="nav-label text-sm font-medium">My Courses</span><span class="nav-tooltip">My Courses</span>
+        </a>
+      }
+      else if (isInstructor)
+      {
+        <a asp-controller="Course" asp-action="Index" class="nav-item @(onCourses && !onCreateCourse ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all">
+          <i class="nav-icon ri-book-open-line text-xl flex-shrink-0"></i><span class="nav-label text-sm font-medium">My Courses</span><span class="nav-tooltip">Courses</span>
+        </a>
+      }
+      @if (isInstructor)
       {
         <a asp-controller="Course" asp-action="Create" class="nav-item @(onCreateCourse ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"><i class="nav-icon ri-add-circle-line text-xl"></i><span class="nav-label text-sm font-medium">Create Course</span><span class="nav-tooltip">Create Course</span></a>
         <a asp-controller="Assignment" asp-action="Index" class="nav-item @(onAssignments ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"><i class="nav-icon ri-file-list-3-line text-xl"></i><span class="nav-label text-sm font-medium">Assignments</span><span class="nav-tooltip">Assignments</span></a>
@@ -143,7 +158,10 @@
         <a asp-controller="Progress" asp-action="Index" class="nav-item @(onProgress ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"><i class="nav-icon ri-file-list-3-line text-xl"></i><span class="nav-label text-sm font-medium">Progress</span><span class="nav-tooltip">Progress</span></a>
         <a asp-controller="Grade" asp-action="MyGrades" class="nav-item @(onGrades ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"><i class="nav-icon ri-bar-chart-box-line text-xl"></i><span class="nav-label text-sm font-medium">Grades</span><span class="nav-tooltip">Grades</span></a>
       }
-      <a asp-controller="Announcement" asp-action="MyFeed" class="nav-item @(onAnnouncements ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"><i class="nav-icon ri-megaphone-line text-xl"></i><span class="nav-label text-sm font-medium">Announcements</span><span class="nav-tooltip">Announcements</span></a>
+      @if (!isAdmin)
+      {
+        <a asp-controller="Announcement" asp-action="MyFeed" class="nav-item @(onAnnouncements ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"><i class="nav-icon ri-megaphone-line text-xl"></i><span class="nav-label text-sm font-medium">Announcements</span><span class="nav-tooltip">Announcements</span></a>
+      }
       @if (isAdmin)
       {
         <p class="nav-section-label text-xs font-semibold text-slate-400 uppercase tracking-widest px-3 pt-4 mb-2">Admin</p>
@@ -163,7 +181,16 @@
     <header class="bg-gradient-to-r from-white via-indigo-50/60 to-cyan-50/50 border-b border-slate-100 px-6 py-3.5 flex items-center gap-4 z-20 shadow-sm">
       <button type="button" onclick="toggleSidebar()" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-primary-50 text-slate-500 hover:text-primary-600 transition"><i class="ri-menu-fold-line text-xl" id="toggle-icon"></i></button>
       <div class="flex-shrink-0"><h1 class="text-base font-semibold text-slate-800">@(ViewData["PageTitle"] ?? ViewData["Title"] ?? "Dashboard")</h1><p class="text-xs text-slate-400">@(ViewData["PageSubtitle"] ?? "Welcome back!")</p></div>
-      <form asp-controller="Course" asp-action="Index" method="get" class="flex-1 max-w-md mx-auto relative"><i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i><input id="topbar-search" name="q" value="@Context.Request.Query["q"]" type="text" placeholder="Search courses..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 transition-all focus:bg-white focus:border-primary-300"/></form>
+      @if (isAdmin)
+      {
+        <div class="flex-1"></div>
+      }
+      else
+      {
+        <form asp-controller="Course" asp-action="@(isStudent && onMyCourses ? "MyCourses" : "Index")" method="get" class="flex-1 max-w-md mx-auto relative"><i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i><input id="topbar-search" name="q" value="@Context.Request.Query["q"]" type="text" placeholder="Search courses..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 transition-all focus:bg-white focus:border-primary-300"/></form>
+      }
+      @if (!isAdmin)
+      {
       <div class="relative">
         <button id="notif-btn" type="button" onclick="toggleNotif()" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-primary-100 text-slate-500 relative"><i class="ri-notification-3-line text-xl"></i><span class="badge-pulse absolute top-1.5 right-1.5 w-2 h-2 bg-primary-500 rounded-full"></span></button>
         <div id="notif-panel" class="topbar-panel-shell hidden absolute right-0 top-12 w-80 rounded-2xl border overflow-hidden z-50">
@@ -192,6 +219,7 @@
           }
         </div>
       </div>
+      }
       <div class="relative">
         <button id="user-btn" type="button" onclick="toggleUserMenu()" class="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border border-transparent hover:border-indigo-100 hover:bg-indigo-50 transition">
           @if (!string.IsNullOrWhiteSpace(avatar))
@@ -206,7 +234,17 @@
         </button>
         <div id="user-dropdown" class="topbar-panel-shell hidden absolute right-0 top-12 w-52 rounded-2xl border overflow-hidden z-50">
           <div class="px-4 py-3 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-cyan-50"><p class="text-sm font-semibold text-slate-800">@name</p><p class="text-xs text-slate-400">@currentUser?.Email</p></div>
-          <div class="py-1"><a asp-controller="Profile" asp-action="Index" class="topbar-panel-item flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:text-primary-600"><i class="ri-user-line"></i> Profile</a><a asp-controller="Course" asp-action="Index" class="topbar-panel-item flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:text-primary-600"><i class="ri-book-open-line"></i> My Courses</a></div>
+          <div class="py-1">
+            <a asp-controller="Profile" asp-action="Index" class="topbar-panel-item flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:text-primary-600"><i class="ri-user-line"></i> Profile</a>
+            @if (isAdmin)
+            {
+              <a asp-controller="Admin" asp-action="Courses" class="topbar-panel-item flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:text-primary-600"><i class="ri-settings-3-line"></i> Manage Courses</a>
+            }
+            else
+            {
+              <a asp-controller="Course" asp-action="@(isStudent ? "MyCourses" : "Index")" class="topbar-panel-item flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:text-primary-600"><i class="ri-book-open-line"></i> My Courses</a>
+            }
+          </div>
           <div class="border-t border-indigo-100 py-1 bg-rose-50/30"><form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="w-full text-left flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"><i class="ri-logout-box-r-line"></i> Logout</button></form></div>
         </div>
       </div>
@@ -235,21 +273,24 @@
     const notifPanel = document.getElementById('notif-panel');
     const userDropdown = document.getElementById('user-dropdown');
     function toggleNotif() {
-      notifPanel.classList.toggle('hidden');
+      notifPanel?.classList.toggle('hidden');
       userDropdown.classList.add('hidden');
     }
     function toggleUserMenu() {
       userDropdown.classList.toggle('hidden');
-      notifPanel.classList.add('hidden');
+      notifPanel?.classList.add('hidden');
     }
     document.addEventListener('click', event => {
-      if (!event.target.closest('#notif-btn') && !event.target.closest('#notif-panel')) notifPanel.classList.add('hidden');
+      if (!event.target.closest('#notif-btn') && !event.target.closest('#notif-panel')) notifPanel?.classList.add('hidden');
       if (!event.target.closest('#user-btn') && !event.target.closest('#user-dropdown')) userDropdown.classList.add('hidden');
     });
     document.addEventListener('keydown', event => {
       if (event.key === '/' && document.activeElement.tagName !== 'INPUT') {
-        event.preventDefault();
-        document.getElementById('topbar-search').focus();
+        const search = document.getElementById('topbar-search');
+        if (search) {
+          event.preventDefault();
+          search.focus();
+        }
       }
     });
     document.querySelectorAll('.global-flash-message').forEach((message, index) => {

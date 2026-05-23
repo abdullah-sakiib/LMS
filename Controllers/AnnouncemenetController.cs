@@ -115,7 +115,8 @@ public class AnnouncementController : Controller
                 .Where(item => item.StudentId == userId && item.Status == "Approved")
                 .Select(item => item.CourseId)
                 .ToListAsync();
-            query = query.Where(item => item.CourseId == null || enrolledCourseIds.Contains(item.CourseId.Value));
+            query = query.Where(item => item.CourseId == null ||
+                (enrolledCourseIds.Contains(item.CourseId.Value) && item.Course != null && item.Course.Status == "Published"));
         }
         else if (User.IsInRole("Instructor"))
         {
@@ -179,6 +180,7 @@ public class AnnouncementController : Controller
     private async Task<bool> CanViewCourseAsync(Course course, string userId)
     {
         if (CanManageCourse(course, userId)) return true;
+        if (course.Status != "Published") return false;
         return await _db.Enrollments.AnyAsync(item =>
             item.CourseId == course.Id && item.StudentId == userId && item.Status == "Approved");
     }

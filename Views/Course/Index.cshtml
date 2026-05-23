@@ -1,8 +1,11 @@
 @model LMS.ViewModels.CourseIndexVM
 @{
-    ViewData["Title"] = Model.IsManagementView ? "My Courses" : "Course Catalog";
+  var isStudentMyCourses = Model.IsMyCoursesPage && !Model.IsManagementView;
+  ViewData["Title"] = Model.IsManagementView ? "My Courses" : isStudentMyCourses ? "My Courses" : "Course Catalog";
     ViewData["PageTitle"] = ViewData["Title"];
-    ViewData["PageSubtitle"] = Model.IsManagementView ? "Manage course content and learners" : "Browse and enroll in available courses";
+  ViewData["PageSubtitle"] = Model.IsManagementView
+    ? "Manage course content and learners"
+    : isStudentMyCourses ? "Continue learning in your enrolled courses" : "Browse and enroll in available courses";
 }
 <style>
   .reveal { animation: catalog-in .45s ease both; }

@@ -12,14 +12,28 @@ public class CourseVM
     [Required]
     public string Description { get; set; } = string.Empty;
 
+    [StringLength(280)]
     public string ShortDescription { get; set; } = string.Empty;
+
     public string Category { get; set; } = string.Empty;
+
     public string Tags { get; set; } = string.Empty;
+
+    [RegularExpression("^(Beginner|Intermediate|Advanced)$", ErrorMessage = "Select a valid course level.")]
     public string Level { get; set; } = "Beginner";
+
+    [Range(1, int.MaxValue)]
     public int DurationWeeks { get; set; } = 12;
+
+    [Range(1, int.MaxValue)]
     public int Capacity { get; set; } = 30;
+
+    [RegularExpression("^(Open|Approval)$", ErrorMessage = "Select a valid enrollment type.")]
     public string EnrollmentType { get; set; } = "Open";
+
     public bool AllowDiscussions { get; set; } = true;
+
+    [RegularExpression("^(Draft|Published|Archived)$", ErrorMessage = "Select a valid course status.")]
     public string Status { get; set; } = "Draft";
 }
 
@@ -40,6 +54,7 @@ public class InstructorCourseRowVM
 public class CourseIndexVM
 {
     public bool IsManagementView { get; set; }
+    public bool IsMyCoursesPage { get; set; }
     public string SearchQuery { get; set; } = string.Empty;
     public List<CourseCardVM> Courses { get; set; } = new();
     public List<string> Categories { get; set; } = new();

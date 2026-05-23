@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LMS.Controllers;
 
 [Authorize]
+[AutoValidateAntiforgeryToken]
 public class QuizController : Controller
 {
     private readonly ApplicationDbContext _db;
@@ -31,7 +32,7 @@ public class QuizController : Controller
 
         if (isStudent)
         {
-            query = query.Where(quiz => quiz.IsPublished && quiz.Course != null &&
+            query = query.Where(quiz => quiz.IsPublished && quiz.Course != null && quiz.Course.Status == "Published" &&
                 quiz.Course.Enrollments.Any(enrollment => enrollment.StudentId == userId && enrollment.Status == "Approved"));
         }
         else if (User.IsInRole("Instructor"))
@@ -180,7 +181,8 @@ public class QuizController : Controller
     {
         var quiz = await _db.Quizzes.Include(item => item.Course)
             .Include(item => item.Questions).ThenInclude(question => question.Options)
-            .FirstOrDefaultAsync(item => item.Id == id && item.IsPublished);
+            .FirstOrDefaultAsync(item => item.Id == id && item.IsPublished &&
+                item.Course != null && item.Course.Status == "Published");
         if (quiz == null) return NotFound();
         var userId = _userManager.GetUserId(User)!;
         if (!await _db.Enrollments.AnyAsync(enrollment => enrollment.CourseId == quiz.CourseId &&
@@ -207,8 +209,10 @@ public class QuizController : Controller
     [HttpPost, Authorize(Roles = "Student")]
     public async Task<IActionResult> Submit([FromBody] QuizSubmitVM vm)
     {
-        var quiz = await _db.Quizzes.Include(item => item.Questions).ThenInclude(question => question.Options)
-            .FirstOrDefaultAsync(item => item.Id == vm.QuizId && item.IsPublished);
+        var quiz = await _db.Quizzes.Include(item => item.Course)
+            .Include(item => item.Questions).ThenInclude(question => question.Options)
+            .FirstOrDefaultAsync(item => item.Id == vm.QuizId && item.IsPublished &&
+                item.Course != null && item.Course.Status == "Published");
         if (quiz == null) return NotFound();
         var userId = _userManager.GetUserId(User)!;
         if (!await _db.Enrollments.AnyAsync(enrollment => enrollment.CourseId == quiz.CourseId &&
@@ -253,6 +257,7 @@ public class QuizController : Controller
         if (quiz == null) return NotFound();
         if (User.IsInRole("Student"))
         {
+            if (quiz.Course?.Status != "Published") return NotFound();
             var userId = _userManager.GetUserId(User);
             if (!await _db.Enrollments.AnyAsync(enrollment => enrollment.CourseId == quiz.CourseId &&
                 enrollment.StudentId == userId && enrollment.Status == "Approved")) return NotFound();

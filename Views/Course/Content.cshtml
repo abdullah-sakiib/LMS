@@ -8,6 +8,16 @@
 <style>
   .content-card { background:linear-gradient(180deg,#fff,#f8faff); border-color:#e0e7ff; }
   .resource-item:hover { background:linear-gradient(90deg,#eef2ff,#ecfeff); border-color:#a5b4fc; }
+  .viewer-panel { background:#fff; }
+  .player-stage { width:min(100%, 840px); margin:0 auto; aspect-ratio:16 / 9; background:#0f172a; display:flex; align-items:center; justify-content:center; }
+  .player-stage video, .player-stage iframe { width:100%; height:100%; border:0; background:#000; }
+  .player-stage video { object-fit:contain; }
+  .lecture-shell { position:relative; width:100%; background:#fff; }
+  .lecture-body { line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere; transition:max-height .24s ease; }
+  .lecture-body.collapsed { max-height:15rem; overflow:hidden; }
+  .lecture-fade { display:none; position:absolute; left:0; right:0; bottom:3.25rem; height:4.25rem; background:linear-gradient(transparent,#fff); pointer-events:none; }
+  .lecture-shell.is-collapsed .lecture-fade { display:block; }
+  .document-stage { width:100%; background:#fff; }
 </style>
 <div class="max-w-7xl mx-auto space-y-6">
   @Html.AntiForgeryToken()
@@ -40,7 +50,7 @@
               {
                 var completed = Model.CompletedResourceIds.Contains(resource.Id);
                 <div class="resource-item border border-indigo-100 rounded-xl px-3 py-2.5 transition">
-                  <button type="button" onclick="showResource(this)" class="w-full text-left" data-title="@resource.Title" data-type="@resource.Type" data-content="@resource.Content">
+                  <button type="button" onclick="showResource(this)" class="resource-button w-full text-left" data-id="@resource.Id" data-title="@resource.Title" data-type="@resource.Type" data-content="@resource.Content">
                     <div class="flex items-center justify-between gap-2"><p class="text-sm font-medium text-slate-700">@resource.Title</p><span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">@resource.Type</span></div>
                   </button>
                   @if (Model.IsStudent)
@@ -59,7 +69,11 @@
     <aside class="lg:col-span-7">
       <div class="content-card rounded-2xl border shadow-sm p-5 lg:sticky lg:top-4">
         <div class="flex items-center justify-between gap-2 mb-3"><h3 id="viewer-title" class="font-semibold text-slate-800">@(Model.SelectedResource?.Title ?? "Select a resource")</h3><span id="viewer-label" class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">@(Model.SelectedResource?.Type ?? "Resource")</span></div>
-        <div id="viewer-media" class="w-full rounded-xl bg-slate-100 border border-slate-100 overflow-hidden min-h-[320px] flex items-center justify-center"></div>
+        <div id="viewer-media" class="viewer-panel w-full rounded-xl bg-slate-100 border border-slate-100 overflow-hidden min-h-[260px] flex items-center justify-center"></div>
+        <div class="mt-4 flex items-center justify-between gap-3">
+          <button type="button" id="prev-resource" onclick="navigateResource(-1)" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:border-indigo-200 hover:text-indigo-600">Previous</button>
+          <button type="button" id="next-resource" onclick="navigateResource(1)" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">Next</button>
+        </div>
         <p id="viewer-description" class="text-sm text-slate-500 mt-3">Choose any resource from the module list to preview or open it in this dedicated panel.</p>
       </div>
     </aside>
@@ -70,39 +84,136 @@
   const viewerTitle = document.getElementById('viewer-title');
   const viewerLabel = document.getElementById('viewer-label');
   const viewerMedia = document.getElementById('viewer-media');
+  const prevButton = document.getElementById('prev-resource');
+  const nextButton = document.getElementById('next-resource');
+  const resourceButtons = [...document.querySelectorAll('.resource-button')];
+  const resourceIndexById = new Map(resourceButtons.map((button, index) => [Number(button.dataset.id), index]));
+  let currentIndex = -1;
+  function resetViewerPanel() {
+    viewerMedia.className = 'viewer-panel w-full rounded-xl bg-slate-100 border border-slate-100 overflow-hidden min-h-[260px] flex items-center justify-center';
+    viewerMedia.replaceChildren();
+  }
+  function toEmbedUrl(contentValue) {
+    try {
+      const url = new URL(contentValue, window.location.origin);
+      const host = url.hostname.toLowerCase().replace('www.', '');
+      if (host === 'youtu.be') {
+        return `https://www.youtube.com/embed/${url.pathname.replace('/', '')}`;
+      }
+      if (host.endsWith('youtube.com') && !url.pathname.startsWith('/embed/')) {
+        const videoId = url.searchParams.get('v') || url.pathname.split('/').filter(Boolean).pop();
+        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+      }
+      if (host.endsWith('vimeo.com') && !host.startsWith('player.')) {
+        const videoId = url.pathname.split('/').filter(Boolean).pop();
+        if (videoId) return `https://player.vimeo.com/video/${videoId}`;
+      }
+    } catch {
+      return contentValue;
+    }
+    return contentValue;
+  }
   function renderResource(title, type, content) {
     viewerTitle.textContent = title || 'Untitled resource';
     viewerLabel.textContent = type || 'Resource';
-    viewerMedia.replaceChildren();
+    resetViewerPanel();
     if (type === 'Video') {
       const contentValue = content || '';
       const isExternal = contentValue.startsWith('http') || contentValue.startsWith('//');
-      if (isExternal) {
+      const lower = contentValue.toLowerCase();
+      const isEmbed = lower.includes('youtube.com') || lower.includes('youtu.be') || lower.includes('vimeo.com') || lower.includes('/embed');
+      const isVideoFile = /\.(mp4|webm|ogg|m4v|mov|mkv)(\?|#|$)/i.test(lower);
+      viewerMedia.className = 'player-stage rounded-xl overflow-hidden shadow-sm';
+      if (isExternal && isEmbed && !isVideoFile) {
         const frame = document.createElement('iframe');
-        frame.src = contentValue;
-        frame.className = 'w-full min-h-[420px] rounded-xl';
+        frame.src = toEmbedUrl(contentValue);
+        frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen';
+        frame.title = title || 'Course video';
         frame.allowFullscreen = true;
         viewerMedia.append(frame);
       } else {
         const video = document.createElement('video');
         video.src = contentValue;
-        video.className = 'w-full min-h-[420px] rounded-xl';
         video.controls = true;
+        video.preload = 'metadata';
+        video.playsInline = true;
         viewerMedia.append(video);
       }
     } else if (type === 'PDF') {
+      viewerMedia.className = 'document-stage rounded-xl overflow-hidden border border-slate-100 p-3';
       const frame = document.createElement('iframe');
       frame.src = content;
-      frame.className = 'w-full min-h-[520px] rounded-xl';
+      frame.className = 'w-full h-[56vh] rounded-xl border border-slate-100';
       viewerMedia.append(frame);
+      const download = document.createElement('a');
+      download.href = content;
+      download.textContent = 'Download PDF';
+      download.className = 'mt-3 inline-flex text-sm font-semibold text-indigo-600 hover:text-indigo-700';
+      download.setAttribute('download', '');
+      viewerMedia.append(download);
     } else {
-      const text = document.createElement('p');
-      text.className = 'whitespace-pre-wrap text-sm text-slate-700 p-6 w-full self-start';
-      text.textContent = content || 'No content available for this resource.';
-      viewerMedia.append(text);
+      const contentValue = content || 'No content available for this resource.';
+      const shouldCollapse = contentValue.length > 650 || contentValue.split(/\r?\n/).length > 9;
+      viewerMedia.className = 'viewer-panel w-full rounded-xl overflow-hidden border border-slate-100 bg-white';
+      const shell = document.createElement('div');
+      shell.className = `lecture-shell p-6 ${shouldCollapse ? 'is-collapsed' : ''}`;
+      const text = document.createElement('div');
+      text.className = `lecture-body text-sm text-slate-700 ${shouldCollapse ? 'collapsed' : ''}`;
+      text.textContent = contentValue;
+      shell.append(text);
+      if (shouldCollapse) {
+        const fade = document.createElement('span');
+        fade.className = 'lecture-fade';
+        shell.append(fade);
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'relative mt-4 inline-flex text-sm font-semibold text-indigo-600 hover:text-indigo-700';
+        toggle.textContent = 'See more';
+        toggle.addEventListener('click', () => {
+          const isCollapsed = text.classList.toggle('collapsed');
+          shell.classList.toggle('is-collapsed', isCollapsed);
+          toggle.textContent = isCollapsed ? 'See more' : 'Show less';
+        });
+        shell.append(toggle);
+      }
+      viewerMedia.append(shell);
     }
   }
-  function showResource(button) { renderResource(button.dataset.title, button.dataset.type, button.dataset.content); }
+  function updateNavButtons() {
+    const hasResources = resourceButtons.length > 0;
+    if (!hasResources) {
+      prevButton.disabled = true;
+      nextButton.disabled = true;
+      prevButton.classList.add('opacity-50', 'cursor-not-allowed');
+      nextButton.classList.add('opacity-50', 'cursor-not-allowed');
+      return;
+    }
+    const atStart = currentIndex <= 0;
+    const atEnd = currentIndex >= resourceButtons.length - 1;
+    prevButton.disabled = atStart;
+    nextButton.disabled = atEnd;
+    prevButton.classList.toggle('opacity-50', atStart);
+    prevButton.classList.toggle('cursor-not-allowed', atStart);
+    nextButton.classList.toggle('opacity-50', atEnd);
+    nextButton.classList.toggle('cursor-not-allowed', atEnd);
+  }
+  function setActiveResource(index) {
+    if (index < 0 || index >= resourceButtons.length) return;
+    const button = resourceButtons[index];
+    renderResource(button.dataset.title, button.dataset.type, button.dataset.content);
+    currentIndex = index;
+    updateNavButtons();
+  }
+  function showResource(button) {
+    const index = resourceIndexById.get(Number(button.dataset.id));
+    if (index !== undefined) setActiveResource(index);
+  }
+  function navigateResource(offset) {
+    if (resourceButtons.length === 0) return;
+    const nextIndex = currentIndex + offset;
+    if (nextIndex < 0 || nextIndex >= resourceButtons.length) return;
+    setActiveResource(nextIndex);
+  }
   async function toggleProgress(button, contentItemId) {
     const token = document.querySelector('input[name=__RequestVerificationToken]').value;
     const response = await fetch('/Progress/Toggle', {
@@ -120,11 +231,19 @@
   }
   @if (Model.SelectedResource != null)
   {
-    <text>renderResource(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SelectedResource.Title)), @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SelectedResource.Type)), @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SelectedResource.Content)));</text>
+    <text>
+      const initialResourceId = @Model.SelectedResource.Id;
+      const initialIndex = resourceIndexById.get(initialResourceId) ?? 0;
+      setActiveResource(initialIndex);
+    </text>
   }
   else
   {
-    <text>viewerMedia.textContent = 'Select a module resource to open it here.';</text>
+    <text>
+      resetViewerPanel();
+      viewerMedia.textContent = 'Select a module resource to open it here.';
+      updateNavButtons();
+    </text>
   }
 </script>
 }

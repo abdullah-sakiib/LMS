@@ -3,6 +3,8 @@
     var course = Model.Course;
     var enrolled = Model.Enrollment?.Status == "Approved";
     var pending = Model.Enrollment?.Status == "Pending";
+    var isAdmin = User.IsInRole("Admin");
+    var canTeachCourse = User.IsInRole("Instructor") && Model.IsCourseStaff;
     ViewData["Title"] = course.Title;
     ViewData["PageTitle"] = course.Title;
     ViewData["PageSubtitle"] = "Course details";
@@ -15,7 +17,10 @@
   <div class="lg:col-span-2 space-y-5">
     <div class="detail-card rounded-2xl border shadow-sm p-6">
       <h1 class="text-2xl font-bold text-slate-800">@course.Title</h1>
-      <p class="text-sm text-slate-500 mt-2">@(!string.IsNullOrWhiteSpace(course.ShortDescription) ? course.ShortDescription : "No short description provided.")</p>
+      @if (!string.IsNullOrWhiteSpace(course.ShortDescription))
+      {
+        <p class="text-sm text-slate-500 mt-2">@course.ShortDescription</p>
+      }
       <div class="mt-3 flex flex-wrap items-center gap-3 text-xs">
         <span class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-semibold"><i class="ri-star-fill mr-1"></i> Course @Model.CourseRating.ToString("0.0") (@Model.CourseReviewCount)</span>
         <span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold"><i class="ri-user-star-line mr-1"></i> Instructor @Model.InstructorRating.ToString("0.0") (@Model.InstructorReviewCount)</span>
@@ -51,14 +56,21 @@
   </div>
   <aside class="space-y-5">
     <div class="detail-card rounded-2xl border shadow-sm p-5">
-      @if (Model.IsCourseStaff)
+      @if (isAdmin)
+      {
+        <p class="text-sm text-slate-500 mb-3">Read-only course preview for administration.</p>
+        <a asp-controller="Admin" asp-action="Courses" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-xl border border-indigo-200 text-indigo-700 text-sm font-semibold">Back to Manage Courses</a>
+      }
+      else if (canTeachCourse)
       {
         <a asp-controller="Content" asp-action="Manage" asp-route-courseId="@course.Id" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700">Manage Course</a>
+        <a asp-action="Students" asp-route-id="@course.Id" class="mt-3 w-full inline-flex items-center justify-center px-4 py-2 rounded-xl border border-indigo-200 text-indigo-700 text-sm font-semibold">View Students</a>
         @if (course.AllowDiscussions) { <a asp-action="Discussion" asp-route-id="@course.Id" class="mt-3 w-full inline-flex items-center justify-center px-4 py-2 rounded-xl border border-indigo-200 text-indigo-700 text-sm font-semibold">Open Discussion Zone</a> }
       }
       else if (enrolled)
       {
         <a asp-action="Content" asp-route-id="@course.Id" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700">Continue Learning</a>
+        @if (course.IsEnded) { <a asp-action="Certificate" asp-route-id="@course.Id" class="mt-3 w-full inline-flex items-center justify-center px-4 py-2 rounded-xl border border-emerald-300 text-emerald-700 text-sm font-semibold hover:bg-emerald-50"><i class="ri-award-line mr-1"></i> Download Certificate</a> }
         @if (course.AllowDiscussions) { <a asp-action="Discussion" asp-route-id="@course.Id" class="mt-3 w-full inline-flex items-center justify-center px-4 py-2 rounded-xl border border-indigo-200 text-indigo-700 text-sm font-semibold">Open Discussion Zone</a> }
         <form asp-controller="Enrollment" asp-action="Drop" method="post" class="mt-3"><input type="hidden" name="courseId" value="@course.Id" /><button class="w-full px-4 py-2 rounded-xl border border-red-200 text-red-600 text-sm font-semibold">Drop Course</button></form>
       }
@@ -75,11 +87,14 @@
       {
         <form asp-controller="Enrollment" asp-action="Enroll" method="post"><input type="hidden" name="courseId" value="@course.Id" /><button class="w-full px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">@(course.EnrollmentType == "Approval" ? "Request Enrollment" : "Enroll Now")</button></form>
       }
-      <div class="mt-4 grid grid-cols-3 gap-2">
-        <a asp-controller="Assignment" asp-action="Index" asp-route-courseId="@course.Id" class="text-center text-xs text-slate-600 border border-slate-200 rounded-lg px-2 py-2">Assignments</a>
-        <a asp-controller="Quiz" asp-action="Index" asp-route-courseId="@course.Id" class="text-center text-xs text-slate-600 border border-slate-200 rounded-lg px-2 py-2">Quizzes</a>
-        <a asp-controller="Announcement" asp-action="Index" asp-route-courseId="@course.Id" class="text-center text-xs text-slate-600 border border-slate-200 rounded-lg px-2 py-2">Updates</a>
-      </div>
+      @if (canTeachCourse || enrolled)
+      {
+        <div class="mt-4 grid grid-cols-3 gap-2">
+          <a asp-controller="Assignment" asp-action="Index" asp-route-courseId="@course.Id" class="text-center text-xs text-slate-600 border border-slate-200 rounded-lg px-2 py-2">Assignments</a>
+          <a asp-controller="Quiz" asp-action="Index" asp-route-courseId="@course.Id" class="text-center text-xs text-slate-600 border border-slate-200 rounded-lg px-2 py-2">Quizzes</a>
+          <a asp-controller="Announcement" asp-action="Index" asp-route-courseId="@course.Id" class="text-center text-xs text-slate-600 border border-slate-200 rounded-lg px-2 py-2">Updates</a>
+        </div>
+      }
     </div>
     @if (Model.IsStudent && enrolled)
     {

@@ -1,6 +1,7 @@
 using LMS.Data;
 using LMS.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,7 +23,17 @@ builder.Services.AddControllersWithViews();
 var app = builder.Build();
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+var contentTypeProvider = new FileExtensionContentTypeProvider();
+contentTypeProvider.Mappings[".mp4"] = "video/mp4";
+contentTypeProvider.Mappings[".webm"] = "video/webm";
+contentTypeProvider.Mappings[".ogg"] = "video/ogg";
+contentTypeProvider.Mappings[".mov"] = "video/quicktime";
+contentTypeProvider.Mappings[".m4v"] = "video/x-m4v";
+contentTypeProvider.Mappings[".mkv"] = "video/x-matroska";
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = contentTypeProvider
+});
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

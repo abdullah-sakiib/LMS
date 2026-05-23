@@ -6,6 +6,7 @@
     ViewData["PageSubtitle"] = "Personal information and account security";
     var avatar = Model.Profile.ProfilePicture;
     var initial = Model.DisplayName.Length > 0 ? Model.DisplayName[..1].ToUpperInvariant() : "U";
+    var isAdmin = Model.Role == "Admin";
 }
 @section DashboardStyles {
 <style>
@@ -42,6 +43,8 @@
         </div>
         <button type="button" onclick="showTab('security')" class="border border-indigo-200 text-indigo-600 text-sm font-semibold rounded-xl px-4 py-2.5">Change Password</button>
       </div>
+      @if (!isAdmin)
+      {
       <div class="flex flex-wrap items-center gap-5 pt-5 mt-5 border-t border-slate-100">
         @if (Model.IsStudent)
         {
@@ -58,12 +61,16 @@
           <div class="profile-stat"><div class="profile-stat-icon bg-violet-50 text-violet-600"><i class="ri-feedback-line"></i></div><div><p class="text-lg font-bold text-slate-800">@Model.RatedCourses</p><p class="text-xs text-slate-400">Reviewed Courses</p></div></div>
         }
       </div>
+      }
     </div>
   </div>
 
   <div class="flex items-center gap-1 bg-gradient-to-r from-indigo-50 to-cyan-50 border border-indigo-100 rounded-xl p-1 mb-6 w-fit">
     <button type="button" onclick="showTab('general')" id="tab-general" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-slate-500"><i class="ri-user-line mr-1.5"></i>General</button>
-    <button type="button" onclick="showTab('academic')" id="tab-academic" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-500"><i class="ri-graduation-cap-line mr-1.5"></i>Academic</button>
+    @if (!isAdmin)
+    {
+      <button type="button" onclick="showTab('academic')" id="tab-academic" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-500"><i class="ri-graduation-cap-line mr-1.5"></i>Academic</button>
+    }
     <button type="button" onclick="showTab('security')" id="tab-security" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-500"><i class="ri-shield-keyhole-line mr-1.5"></i>Security</button>
   </div>
 
@@ -90,6 +97,8 @@
         </form>
       </div>
 
+      @if (!isAdmin)
+      {
       <div id="panel-academic" class="hidden">
         <form method="post" asp-action="Index">
           <input type="hidden" name="formType" value="academic" />
@@ -127,6 +136,7 @@
           <div class="flex justify-end"><button class="btn-primary px-6 py-2.5 text-sm font-semibold text-white rounded-xl"><i class="ri-save-line mr-1"></i>Save changes</button></div>
         </form>
       </div>
+      }
 
       <div id="panel-security" class="hidden">
         <form method="post" asp-action="Index">
@@ -181,11 +191,11 @@
 <script>
   function showTab(tab) {
     ['general','academic','security'].forEach(name => {
-      document.getElementById('panel-' + name).classList.toggle('hidden', name !== tab);
-      document.getElementById('tab-' + name).classList.toggle('active', name === tab);
+      document.getElementById('panel-' + name)?.classList.toggle('hidden', name !== tab);
+      document.getElementById('tab-' + name)?.classList.toggle('active', name === tab);
     });
   }
   const requestedTab = new URLSearchParams(window.location.search).get('tab');
-  if (requestedTab === 'security' || requestedTab === 'academic') showTab(requestedTab);
+  if (requestedTab === 'security' || (requestedTab === 'academic' && document.getElementById('tab-academic'))) showTab(requestedTab);
 </script>
 }

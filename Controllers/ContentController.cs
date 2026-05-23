@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LMS.Controllers;
 
 [Authorize(Roles = "Instructor,Admin")]
+[AutoValidateAntiforgeryToken]
 public class ContentController : Controller
 {
     private readonly ApplicationDbContext _db;

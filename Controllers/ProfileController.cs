@@ -201,7 +201,7 @@ public class ProfileController : Controller
                         AveragePercent = Math.Round(assessmentPercentages.Average(), 1)
                     });
                 }
-                var certificateAvailable = course.IsEnded && totalContent > 0 && complete >= totalContent;
+                var certificateAvailable = course.IsEnded;
                 vm.Courses.Add(new ProfileCourseVM
                 {
                     Id = course.Id,
@@ -219,10 +219,10 @@ public class ProfileController : Controller
             vm.AverageGrade = percentages.Count == 0 ? 0 : Math.Round(percentages.Average(), 1);
             vm.GradeSummary = vm.GradeSummary.OrderByDescending(item => item.AveragePercent).Take(6).ToList();
         }
-        else
+        else if (role == "Instructor")
         {
             var courses = await _db.Courses
-                .Where(item => role == "Admin" || item.InstructorId == user.Id)
+                .Where(item => item.InstructorId == user.Id)
                 .Include(item => item.Instructor)
                 .Include(item => item.Enrollments)
                 .Include(item => item.Reviews)

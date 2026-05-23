@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LMS.Controllers;
 
 [Authorize(Roles = "Student")]
+[AutoValidateAntiforgeryToken]
 public class ProgressController : Controller
 {
     private readonly ApplicationDbContext _db;
@@ -103,33 +104,34 @@ public class ProgressController : Controller
 
         var courses = await _db.Courses
             .Include(c => c.Modules).ThenInclude(m => m.ContentItems)
-            .Where(c => enrolledCourseIds.Contains(c.Id))
+            .Where(c => enrolledCourseIds.Contains(c.Id) && c.Status == "Published")
             .ToListAsync();
+        var visibleCourseIds = courses.Select(c => c.Id).ToList();
 
         var progressRecords = await _db.StudentProgress
             .Where(p => p.StudentId == userId && p.IsCompleted)
             .ToListAsync();
 
         var assignmentCounts = await _db.Assignments
-            .Where(item => enrolledCourseIds.Contains(item.CourseId))
+            .Where(item => visibleCourseIds.Contains(item.CourseId))
             .GroupBy(item => item.CourseId)
             .Select(group => new { CourseId = group.Key, Count = group.Count() })
             .ToListAsync();
 
         var quizCounts = await _db.Quizzes
-            .Where(item => enrolledCourseIds.Contains(item.CourseId))
+            .Where(item => visibleCourseIds.Contains(item.CourseId) && item.IsPublished)
             .GroupBy(item => item.CourseId)
             .Select(group => new { CourseId = group.Key, Count = group.Count() })
             .ToListAsync();
 
         var submissions = await _db.AssignmentSubmissions
             .Include(item => item.Assignment)
-            .Where(item => item.StudentId == userId && item.Assignment != null && enrolledCourseIds.Contains(item.Assignment.CourseId))
+            .Where(item => item.StudentId == userId && item.Assignment != null && visibleCourseIds.Contains(item.Assignment.CourseId))
             .ToListAsync();
 
         var quizAttempts = await _db.QuizAttempts
             .Include(item => item.Quiz)
-            .Where(item => item.StudentId == userId && item.SubmittedAt != null && item.Quiz != null && enrolledCourseIds.Contains(item.Quiz.CourseId))
+            .Where(item => item.StudentId == userId && item.SubmittedAt != null && item.Quiz != null && visibleCourseIds.Contains(item.Quiz.CourseId))
             .ToListAsync();
 
         var completedIds = progressRecords.Select(p => p.ContentItemId).ToHashSet();
@@ -188,7 +190,8 @@ public class ProgressController : Controller
     private async Task<bool> CanTrackProgressAsync(string userId, int contentItemId, int courseId)
     {
         var hasContent = await _db.ContentItems.AnyAsync(item => item.Id == contentItemId &&
-            item.Module != null && item.Module.CourseId == courseId);
+            item.Module != null && item.Module.CourseId == courseId &&
+            item.Module.Course != null && item.Module.Course.Status == "Published");
         return hasContent && await _db.Enrollments.AnyAsync(enrollment => enrollment.StudentId == userId &&
             enrollment.CourseId == courseId && enrollment.Status == "Approved");
     }

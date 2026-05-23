@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LMS.Controllers;
 
 [Authorize]
+[AutoValidateAntiforgeryToken]
 public class CourseController : Controller
 {
     private readonly ApplicationDbContext _db;
@@ -50,28 +51,14 @@ public class CourseController : Controller
 
         var courses = await query.OrderBy(course => course.Title).ToListAsync();
         var cards = await BuildCardsAsync(courses);
-        var defaultCategories = new List<string>
-        {
-            "Computer Science",
-            "Data Science",
-            "Business",
-            "Design",
-            "Marketing",
-            "Languages",
-            "Engineering",
-            "Health",
-            "Arts",
-            "Mathematics",
-            "IT & Networking"
-        };
         var viewModel = new CourseIndexVM
         {
             IsManagementView = isManagementView,
+            IsMyCoursesPage = false,
             SearchQuery = q?.Trim() ?? string.Empty,
             Courses = cards,
             Categories = courses.Select(course => course.Category)
                 .Where(category => !string.IsNullOrWhiteSpace(category))
-                .Concat(defaultCategories)
                 .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(category => category).ToList(),
             Tags = courses.SelectMany(course => course.TagList)
                 .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(tag => tag).ToList()
@@ -87,6 +74,55 @@ public class CourseController : Controller
 
         ViewData["Title"] = isManagementView ? "My Courses" : "Course Catalog";
         return View(viewModel);
+    }
+
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> MyCourses(string? q)
+    {
+        var userId = _userManager.GetUserId(User);
+        if (string.IsNullOrWhiteSpace(userId)) return RedirectToAction(nameof(Index));
+
+        var enrolledCourseIds = await _db.Enrollments
+            .Where(enrollment => enrollment.StudentId == userId && enrollment.Status == "Approved")
+            .Select(enrollment => enrollment.CourseId)
+            .ToListAsync();
+
+        IQueryable<Course> query = _db.Courses
+            .Include(course => course.Instructor)
+            .Include(course => course.Enrollments).ThenInclude(enrollment => enrollment.Student)
+            .Include(course => course.Modules).ThenInclude(module => module.ContentItems)
+            .Include(course => course.Assignments)
+            .Include(course => course.Reviews)
+            .Where(course => enrolledCourseIds.Contains(course.Id) && course.Status == "Published");
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var term = q.Trim().ToLower();
+            query = query.Where(course =>
+                course.Title.ToLower().Contains(term) ||
+                course.Description.ToLower().Contains(term) ||
+                course.Tags.ToLower().Contains(term) ||
+                course.Category.ToLower().Contains(term));
+        }
+
+        var courses = await query.OrderBy(course => course.Title).ToListAsync();
+        var cards = await BuildCardsAsync(courses);
+        var viewModel = new CourseIndexVM
+        {
+            IsManagementView = false,
+            IsMyCoursesPage = true,
+            SearchQuery = q?.Trim() ?? string.Empty,
+            Courses = cards,
+            Categories = courses.Select(course => course.Category)
+                .Where(category => !string.IsNullOrWhiteSpace(category))
+                .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(category => category).ToList(),
+            Tags = courses.SelectMany(course => course.TagList)
+                .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(tag => tag).ToList(),
+            EnrolledCourseIds = enrolledCourseIds.ToHashSet()
+        };
+
+        ViewData["Title"] = "My Courses";
+        return View("Index", viewModel);
     }
 
     public async Task<IActionResult> Details(int id)
@@ -166,10 +202,110 @@ public class CourseController : Controller
             TotalResources = resources.Count,
             VideoResources = resources.Count(item => item.Type == "Video"),
             ProgressPercent = resources.Count == 0 ? 0 : Math.Round(completedIds.Count * 100d / resources.Count, 1),
-            CertificateAvailable = isStudent && course.IsEnded && resources.Count > 0 && completedIds.Count == resources.Count
+            CertificateAvailable = isStudent && enrollment != null && course.IsEnded
         };
         ViewData["Title"] = $"{course.Title} Content";
         return View(viewModel);
+    }
+
+    [Authorize(Roles = "Instructor,Admin")]
+    public async Task<IActionResult> Students(int id)
+    {
+        var course = await _db.Courses
+            .Include(item => item.Enrollments).ThenInclude(enrollment => enrollment.Student)
+            .FirstOrDefaultAsync(item => item.Id == id);
+        if (course == null || !await CanManageCourseAsync(course)) return NotFound();
+
+        var totalResources = await _db.ContentItems
+            .Where(item => item.Module != null && item.Module.CourseId == id)
+            .CountAsync();
+
+        var completedByStudent = await _db.StudentProgress
+            .Where(progress => progress.CourseId == id && progress.IsCompleted)
+            .GroupBy(progress => progress.StudentId)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(item => item.Key, item => item.Count);
+
+        var students = course.Enrollments
+            .Where(enrollment => enrollment.Status == "Approved")
+            .OrderBy(enrollment => enrollment.Student!.FullName)
+            .Select(enrollment =>
+            {
+                completedByStudent.TryGetValue(enrollment.StudentId, out var completed);
+                var percent = totalResources == 0 ? 0 : Math.Round(completed * 100d / totalResources, 1);
+                return new InstructorStudentRowVM
+                {
+                    StudentId = enrollment.StudentId,
+                    Name = enrollment.Student?.FullName ?? "Student",
+                    Email = enrollment.Student?.Email ?? string.Empty,
+                    Completed = completed,
+                    Total = totalResources,
+                    Percent = percent,
+                    EnrolledAt = enrollment.EnrolledAt,
+                    ApprovedAt = enrollment.ApprovedAt
+                };
+            }).ToList();
+
+        ViewData["Title"] = $"{course.Title} Students";
+        return View(new InstructorCourseStudentsVM
+        {
+            CourseId = course.Id,
+            CourseTitle = course.Title,
+            TotalResources = totalResources,
+            Students = students
+        });
+    }
+
+    [Authorize(Roles = "Instructor,Admin")]
+    public async Task<IActionResult> StudentProgress(int id, string studentId)
+    {
+        if (string.IsNullOrWhiteSpace(studentId)) return NotFound();
+        var course = await _db.Courses
+            .Include(item => item.Modules).ThenInclude(module => module.ContentItems)
+            .FirstOrDefaultAsync(item => item.Id == id);
+        if (course == null || !await CanManageCourseAsync(course)) return NotFound();
+
+        var enrollment = await _db.Enrollments
+            .Include(item => item.Student)
+            .FirstOrDefaultAsync(item => item.CourseId == id && item.StudentId == studentId && item.Status == "Approved");
+        if (enrollment?.Student == null) return NotFound();
+
+        var completedItems = await _db.StudentProgress
+            .Where(progress => progress.CourseId == id && progress.StudentId == studentId && progress.IsCompleted)
+            .ToListAsync();
+
+        var completedByContentId = completedItems.ToDictionary(item => item.ContentItemId, item => item);
+        var resources = course.Modules
+            .OrderBy(module => module.Order)
+            .SelectMany(module => module.ContentItems.OrderBy(item => item.Order)
+                .Select(item => new InstructorResourceProgressVM
+                {
+                    ModuleTitle = module.Title,
+                    ContentItemId = item.Id,
+                    Title = item.Title,
+                    Type = item.Type,
+                    IsCompleted = completedByContentId.ContainsKey(item.Id),
+                    CompletedAt = completedByContentId.TryGetValue(item.Id, out var progress) ? progress.CompletedAt : null
+                }))
+            .ToList();
+
+        var total = resources.Count;
+        var completed = resources.Count(item => item.IsCompleted);
+        var percent = total == 0 ? 0 : Math.Round(completed * 100d / total, 1);
+
+        ViewData["Title"] = "Student Progress";
+        return View(new InstructorStudentProgressVM
+        {
+            CourseId = course.Id,
+            CourseTitle = course.Title,
+            StudentId = enrollment.StudentId,
+            StudentName = enrollment.Student.FullName,
+            StudentEmail = enrollment.Student.Email ?? string.Empty,
+            Completed = completed,
+            Total = total,
+            Percent = percent,
+            Resources = resources
+        });
     }
 
     [HttpGet]
@@ -248,25 +384,19 @@ public class CourseController : Controller
     public async Task<IActionResult> Certificate(int id)
     {
         var user = await _userManager.GetUserAsync(User);
+        if (user == null) return Challenge();
+
         var course = await _db.Courses.Include(item => item.Instructor)
-            .Include(item => item.Modules).ThenInclude(module => module.ContentItems)
             .FirstOrDefaultAsync(item => item.Id == id);
         if (course == null) return NotFound();
 
         var isEnrolled = await _db.Enrollments.AnyAsync(item => item.CourseId == id &&
-            item.StudentId == user!.Id && item.Status == "Approved");
-        var totalResources = course.Modules.Sum(module => module.ContentItems.Count);
-        var completedResources = await _db.StudentProgress.CountAsync(item => item.CourseId == id &&
-            item.StudentId == user!.Id && item.IsCompleted);
-        if (!isEnrolled || !course.IsEnded || totalResources == 0 || completedResources != totalResources)
+            item.StudentId == user.Id && item.Status == "Approved");
+        if (!isEnrolled || !course.IsEnded)
         {
             TempData["Error"] = !isEnrolled
                 ? "You must be enrolled in this course to download a certificate."
-                : !course.IsEnded
-                    ? "This course is not ended yet. Certificate is not available."
-                    : totalResources == 0
-                        ? "Certificate is locked until course resources are available and completed."
-                        : $"Certificate is locked. Complete all resources first ({completedResources}/{totalResources}).";
+                : "This course has not been ended by the instructor yet. Certificate is not available.";
             return RedirectToAction(nameof(Content), new { id });
         }
 
@@ -276,7 +406,7 @@ public class CourseController : Controller
         return View(new CourseCertificateVM
         {
             Course = course,
-            StudentName = user!.FullName,
+            StudentName = user.FullName,
             InstructorName = course.Instructor?.FullName ?? "Course Instructor",
             IssuedOn = issuedOn,
             CertificateCode = $"EDU-{course.Id:00000}-{user.Id[..Math.Min(user.Id.Length, 5)].ToUpperInvariant()}-{issuedOn:yyyyMMdd}"
@@ -411,11 +541,11 @@ public class CourseController : Controller
 
     private static void ApplyCourseFields(Course course, CourseVM model)
     {
-        course.Title = model.Title.Trim();
-        course.ShortDescription = model.ShortDescription.Trim();
-        course.Description = model.Description.Trim();
-        course.Category = model.Category.Trim();
-        course.Tags = model.Tags.Trim();
+        course.Title = (model.Title ?? string.Empty).Trim();
+        course.ShortDescription = (model.ShortDescription ?? string.Empty).Trim();
+        course.Description = (model.Description ?? string.Empty).Trim();
+        course.Category = (model.Category ?? string.Empty).Trim();
+        course.Tags = (model.Tags ?? string.Empty).Trim();
         course.Level = new[] { "Beginner", "Intermediate", "Advanced" }.Contains(model.Level) ? model.Level : "Beginner";
         course.DurationWeeks = Math.Max(model.DurationWeeks, 1);
         course.Capacity = Math.Max(model.Capacity, 1);

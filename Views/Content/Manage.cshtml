@@ -21,7 +21,7 @@
         <a asp-controller="Course" asp-action="Edit" asp-route-id="@Model.Id" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary-600"><i class="ri-edit-line"></i> Edit course settings</a>
         @if (!Model.IsEnded)
         {
-          <form asp-controller="Course" asp-action="EndCourse" asp-route-id="@Model.Id" method="post" class="mt-4" onsubmit="return confirm('End this course now? Students who finish every resource will be able to download certificates.');">
+          <form asp-controller="Course" asp-action="EndCourse" asp-route-id="@Model.Id" method="post" class="mt-4" onsubmit="return confirm('End this course now? Enrolled students will be able to download certificates.');">
             <button class="w-full px-3 py-2 rounded-xl border border-rose-200 text-rose-700 text-sm font-semibold hover:bg-rose-50">End Course</button>
           </form>
         }

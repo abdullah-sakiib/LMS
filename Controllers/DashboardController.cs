@@ -42,7 +42,7 @@ public class DashboardController : Controller
                 .Select(e => e.CourseId)
                 .ToListAsync();
             var courses = await _db.Courses
-                .Where(c => enrolledCourseIds.Contains(c.Id))
+                .Where(c => enrolledCourseIds.Contains(c.Id) && c.Status == "Published")
                 .Include(c => c.Instructor)
                 .Include(c => c.Modules).ThenInclude(m => m.ContentItems)
                 .Include(c => c.Assignments)

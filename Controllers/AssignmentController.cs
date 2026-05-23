@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LMS.Controllers;
 
 [Authorize]
+[AutoValidateAntiforgeryToken]
 public class AssignmentController : Controller
 {
     private readonly ApplicationDbContext _db;
@@ -204,6 +205,7 @@ public class AssignmentController : Controller
     private async Task<bool> CanAccessAssignmentAsync(Assignment assignment)
     {
         if (!User.IsInRole("Student")) return await CanManageCourseAsync(assignment.CourseId);
+        if (assignment.Course?.Status != "Published") return false;
         var userId = _userManager.GetUserId(User);
         return await _db.Enrollments.AnyAsync(item => item.CourseId == assignment.CourseId &&
             item.StudentId == userId && item.Status == "Approved");

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LMS.Controllers;
 
 [Authorize]
+[AutoValidateAntiforgeryToken]
 public class GradeController : Controller
 {
     private readonly ApplicationDbContext _db;

@@ -18,19 +18,27 @@
         }
         else if (Model.Type == "PDF")
         {
-            <iframe src="@Model.Content" class="w-full h-screen rounded-xl border border-gray-200"></iframe>
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm text-gray-500">Preview</p>
+                <a href="@Model.Content" class="text-sm text-orange-500 hover:underline" download>Download PDF</a>
+            </div>
+            <iframe src="@Model.Content" class="w-full h-[70vh] rounded-xl border border-gray-200"></iframe>
         }
         else if (Model.Type == "Video")
         {
-            var isExternal = Model.Content.StartsWith("http", StringComparison.OrdinalIgnoreCase) || Model.Content.StartsWith("//");
-            <div class="aspect-video">
-                @if (isExternal)
+            var contentValue = Model.Content ?? string.Empty;
+            var isExternal = contentValue.StartsWith("http", StringComparison.OrdinalIgnoreCase) || contentValue.StartsWith("//");
+            var lower = contentValue.ToLowerInvariant();
+            var isEmbed = lower.Contains("youtube.com") || lower.Contains("youtu.be") || lower.Contains("vimeo.com") || lower.Contains("/embed");
+            var isVideoFile = lower.Contains(".mp4") || lower.Contains(".webm") || lower.Contains(".ogg") || lower.Contains(".m4v") || lower.Contains(".mov") || lower.Contains(".mkv");
+            <div class="aspect-video max-h-[70vh]">
+                @if (isExternal && isEmbed && !isVideoFile)
                 {
-                    <iframe src="@Model.Content" class="w-full h-full rounded-xl" allowfullscreen></iframe>
+                    <iframe src="@contentValue" class="w-full h-full rounded-xl" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe>
                 }
                 else
                 {
-                    <video src="@Model.Content" class="w-full h-full rounded-xl" controls></video>
+                    <video src="@contentValue" class="w-full h-full rounded-xl" controls playsinline></video>
                 }
             </div>
         }

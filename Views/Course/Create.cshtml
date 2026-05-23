@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "Create Course";
     ViewData["PageTitle"] = "Create New Course";
-    ViewData["PageSubtitle"] = "Fill in the details to publish your course";
+    ViewData["PageSubtitle"] = "Set up your course and choose how to launch it";
 }
 <style>
   .input-field:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.10); }
@@ -13,29 +13,24 @@
   <div class="flex items-center gap-2 text-xs text-slate-400 mb-6">
     <a asp-controller="Dashboard" asp-action="Index" class="hover:text-primary-600">Dashboard</a><i class="ri-arrow-right-s-line"></i><span class="text-slate-600 font-medium">Create Course</span>
   </div>
-  <div class="flex items-center gap-0 mb-8">
-    <div class="flex items-center flex-1"><div class="flex flex-col items-center"><div class="w-9 h-9 rounded-full flex items-center justify-center bg-primary-600 text-white"><i class="ri-information-line"></i></div><span class="text-xs font-medium mt-1.5 text-primary-600">Basic Info</span></div><div class="flex-1 h-0.5 bg-slate-200 mx-3 mt-[-18px]"></div></div>
-    <div class="flex items-center flex-1"><div class="flex flex-col items-center"><div class="w-9 h-9 rounded-full flex items-center justify-center border-2 border-slate-200 text-slate-400"><i class="ri-settings-3-line"></i></div><span class="text-xs font-medium mt-1.5 text-slate-400">Settings</span></div><div class="flex-1 h-0.5 bg-slate-200 mx-3 mt-[-18px]"></div></div>
-    <div class="flex flex-col items-center"><div class="w-9 h-9 rounded-full flex items-center justify-center border-2 border-slate-200 text-slate-400"><i class="ri-check-line"></i></div><span class="text-xs font-medium mt-1.5 text-slate-400">Ready</span></div>
-  </div>
   <form asp-action="Create" method="post" class="grid lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-5">
       <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
         <h2 class="font-semibold text-slate-800 mb-5 flex items-center gap-2"><span class="w-6 h-6 bg-primary-100 text-primary-600 rounded-lg flex items-center justify-center text-xs font-bold">1</span> Basic Information</h2>
         <div asp-validation-summary="ModelOnly" class="text-red-600 text-sm mb-4"></div>
-        <div class="mb-4"><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Course Title <span class="text-red-400">*</span></label><input asp-for="Title" id="course-title" oninput="updatePreview()" placeholder="e.g. Introduction to Algorithms" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"/><span asp-validation-for="Title" class="text-xs text-red-500"></span></div>
-        <div class="mb-4"><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Description <span class="text-red-400">*</span></label><textarea asp-for="Description" id="course-description" oninput="updatePreview()" rows="5" placeholder="Describe what students will learn and why this course is valuable..." class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm resize-none"></textarea><span asp-validation-for="Description" class="text-xs text-red-500"></span></div>
+        <div class="mb-4"><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Course Title <span class="text-red-400">*</span></label><input asp-for="Title" id="course-title" data-preview-field placeholder="e.g. Introduction to Algorithms" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"/><span asp-validation-for="Title" class="text-xs text-red-500"></span></div>
+        <div class="mb-4"><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Description <span class="text-red-400">*</span></label><textarea asp-for="Description" id="course-description" data-preview-field rows="5" placeholder="Describe what students will learn and why this course is valuable..." class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm resize-none"></textarea><span asp-validation-for="Description" class="text-xs text-red-500"></span></div>
         <div class="grid sm:grid-cols-2 gap-4 mb-4">
-          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Category</label><input asp-for="Category" placeholder="Computer Science" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"/></div>
-          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Tags</label><input asp-for="Tags" placeholder="algorithms, python, data" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"/></div>
+          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Category</label><input asp-for="Category" id="course-category" data-preview-field placeholder="Computer Science" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"/><span asp-validation-for="Category" class="text-xs text-red-500"></span></div>
+          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Tags</label><input asp-for="Tags" id="course-tags" data-preview-field placeholder="algorithms, python, data" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"/><span asp-validation-for="Tags" class="text-xs text-red-500"></span></div>
         </div>
         <div class="grid sm:grid-cols-2 gap-4">
-          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Level</label><select asp-for="Level" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>
-          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Duration (weeks)</label><input asp-for="DurationWeeks" type="number" min="1" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"/></div>
-          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Max Capacity</label><input asp-for="Capacity" type="number" min="1" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"/></div>
-          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Initial Status</label><select asp-for="Status" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="Draft">Save as draft</option><option value="Published">Publish now</option></select></div>
-          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Enrollment Type</label><select asp-for="EnrollmentType" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="Open">Open enrollment</option><option value="Approval">Approval required</option></select></div>
-          <label class="flex items-center gap-2 text-sm text-slate-600 pt-7"><input asp-for="AllowDiscussions" class="rounded border-slate-300"/> Allow student discussions</label>
+          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Level</label><select asp-for="Level" id="course-level" data-preview-field class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select><span asp-validation-for="Level" class="text-xs text-red-500"></span></div>
+          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Duration (weeks)</label><input asp-for="DurationWeeks" id="course-duration" data-preview-field type="number" min="1" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"/><span asp-validation-for="DurationWeeks" class="text-xs text-red-500"></span></div>
+          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Max Capacity</label><input asp-for="Capacity" id="course-capacity" data-preview-field type="number" min="1" class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"/><span asp-validation-for="Capacity" class="text-xs text-red-500"></span></div>
+          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Initial Status</label><select asp-for="Status" id="course-status" data-preview-field class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="Draft">Save as draft</option><option value="Published">Publish now</option></select><span asp-validation-for="Status" class="text-xs text-red-500"></span></div>
+          <div><label class="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">Enrollment Type</label><select asp-for="EnrollmentType" id="course-enrollment" data-preview-field class="input-field w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="Open">Open enrollment</option><option value="Approval">Approval required</option></select><span asp-validation-for="EnrollmentType" class="text-xs text-red-500"></span></div>
+          <label class="flex items-center gap-2 text-sm text-slate-600 pt-7"><input asp-for="AllowDiscussions" id="course-discussions" data-preview-field class="rounded border-slate-300"/> Allow student discussions</label>
         </div>
       </div>
       <div class="flex justify-between">
@@ -49,18 +44,51 @@
         <div class="h-28 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center mb-4"><i class="ri-book-open-line text-white/70 text-4xl"></i></div>
         <h3 id="preview-title" class="font-semibold text-slate-800">Your course title</h3>
         <p id="preview-desc" class="text-xs text-slate-500 mt-2 line-clamp-3">Your course description will appear here.</p>
-        <div class="mt-4 text-xs text-slate-500 flex gap-2"><span class="bg-primary-50 text-primary-600 px-2 py-1 rounded-full">Instructor course</span><span class="bg-slate-50 px-2 py-1 rounded-full">Up to @Model.Capacity students</span></div>
+        <div class="mt-4 text-xs text-slate-500 flex flex-wrap gap-2">
+          <span id="preview-category" class="bg-primary-50 text-primary-600 px-2 py-1 rounded-full">General</span>
+          <span id="preview-level" class="bg-slate-50 px-2 py-1 rounded-full">@Model.Level</span>
+          <span id="preview-capacity" class="bg-slate-50 px-2 py-1 rounded-full">Up to @Model.Capacity students</span>
+        </div>
+        <p id="preview-tags" class="text-xs text-slate-400 mt-3">No tags added</p>
+        <div class="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500 space-y-2">
+          <p><strong class="text-slate-600">Duration:</strong> <span id="preview-duration">@Model.DurationWeeks weeks</span></p>
+          <p><strong class="text-slate-600">Enrollment:</strong> <span id="preview-enrollment">Open enrollment</span></p>
+          <p><strong class="text-slate-600">Launch:</strong> <span id="preview-status">Save as draft</span></p>
+          <p><strong class="text-slate-600">Discussions:</strong> <span id="preview-discussions">Allowed</span></p>
+        </div>
       </div>
     </aside>
   </form>
 </div>
 @section Scripts {
+<partial name="_ValidationScriptsPartial" />
 <script>
   function updatePreview() {
     const title = document.getElementById('course-title').value.trim();
     const description = document.getElementById('course-description').value.trim();
+    const category = document.getElementById('course-category').value.trim();
+    const tags = document.getElementById('course-tags').value.trim();
+    const capacity = document.getElementById('course-capacity').value;
+    const duration = document.getElementById('course-duration').value;
+    const level = document.getElementById('course-level').value;
+    const enrollment = document.getElementById('course-enrollment');
+    const status = document.getElementById('course-status');
+    const discussions = document.getElementById('course-discussions').checked;
     document.getElementById('preview-title').textContent = title || 'Your course title';
     document.getElementById('preview-desc').textContent = description || 'Your course description will appear here.';
+    document.getElementById('preview-category').textContent = category || 'General';
+    document.getElementById('preview-level').textContent = level;
+    document.getElementById('preview-capacity').textContent = `Up to ${capacity || 0} students`;
+    document.getElementById('preview-tags').textContent = tags ? `Tags: ${tags}` : 'No tags added';
+    document.getElementById('preview-duration').textContent = `${duration || 0} weeks`;
+    document.getElementById('preview-enrollment').textContent = enrollment.options[enrollment.selectedIndex].text;
+    document.getElementById('preview-status').textContent = status.options[status.selectedIndex].text;
+    document.getElementById('preview-discussions').textContent = discussions ? 'Allowed' : 'Disabled';
   }
+  document.querySelectorAll('[data-preview-field]').forEach(field => {
+    field.addEventListener('input', updatePreview);
+    field.addEventListener('change', updatePreview);
+  });
+  updatePreview();
 </script>
 }
