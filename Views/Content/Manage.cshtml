@@ -69,10 +69,11 @@
           }
           <form asp-controller="Content" asp-action="AddContent" method="post" enctype="multipart/form-data" class="border-t border-slate-100 pt-4 space-y-3">
             <input type="hidden" name="moduleId" value="@module.Id" /><input type="hidden" name="courseId" value="@Model.Id" />
-            <div class="flex gap-3"><input type="text" name="title" placeholder="Resource title" class="manage-input flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm" required /><select name="type" id="type-@module.Id" onchange="toggleContentInput(@module.Id, this.value)" class="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="Lecture">Lecture</option><option value="PDF">PDF</option><option value="Video">Video URL</option></select></div>
+            <div class="flex gap-3"><input type="text" name="title" placeholder="Resource title" class="manage-input flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm" required /><select name="type" id="type-@module.Id" onchange="toggleContentInput(@module.Id, this.value)" class="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="Lecture">Lecture</option><option value="PDF">PDF</option><option value="VideoUrl">Video URL</option><option value="VideoUpload">Video Upload</option></select></div>
             <textarea id="lecture-@module.Id" name="textContent" rows="3" placeholder="Lecture content..." class="manage-input w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></textarea>
             <input id="pdf-@module.Id" disabled type="file" name="file" accept=".pdf" class="hidden w-full text-sm text-slate-500" />
-            <input id="video-@module.Id" disabled type="url" name="textContent" placeholder="Video URL" class="hidden manage-input w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            <input id="video-url-@module.Id" disabled type="url" name="textContent" placeholder="Video URL" class="hidden manage-input w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            <input id="video-file-@module.Id" disabled type="file" name="file" accept="video/*" class="hidden w-full text-sm text-slate-500" />
             <button type="submit" class="text-sm font-semibold text-white bg-slate-800 px-4 py-2 rounded-xl"><i class="ri-add-line"></i> Add Resource</button>
           </form>
         </article>
@@ -84,12 +85,12 @@
 @section Scripts {
 <script>
   function toggleContentInput(moduleId, type) {
-    ['lecture-', 'pdf-', 'video-'].forEach(prefix => {
+    ['lecture-', 'pdf-', 'video-url-', 'video-file-'].forEach(prefix => {
       const field = document.getElementById(prefix + moduleId);
       field.classList.add('hidden');
       field.disabled = true;
     });
-    const field = document.getElementById((type === 'PDF' ? 'pdf-' : type === 'Video' ? 'video-' : 'lecture-') + moduleId);
+    const field = document.getElementById((type === 'PDF' ? 'pdf-' : type === 'VideoUrl' ? 'video-url-' : type === 'VideoUpload' ? 'video-file-' : 'lecture-') + moduleId);
     field.classList.remove('hidden');
     field.disabled = false;
   }

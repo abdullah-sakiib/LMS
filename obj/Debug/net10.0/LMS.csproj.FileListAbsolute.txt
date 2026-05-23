@@ -382,3 +382,4 @@ D:\LMS\LMS\obj\verification-build-project\ru\Microsoft.CodeAnalysis.Workspaces.M
 D:\LMS\LMS\obj\verification-build-project\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 D:\LMS\LMS\obj\verification-build-project\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 D:\LMS\LMS\obj\verification-build-project\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
+D:\LMS\LMS\obj\Debug\net10.0\LMS.sourcelink.json

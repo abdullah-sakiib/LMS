@@ -59,6 +59,7 @@ public class ContentController : Controller
         var module = await _db.Modules.FirstOrDefaultAsync(m => m.Id == moduleId && m.CourseId == courseId);
         if (module == null) return NotFound();
         string content = textContent ?? string.Empty;
+        var resolvedType = type is "VideoUrl" or "VideoUpload" ? "Video" : type;
 
         if (file != null && file.Length > 0)
         {
@@ -76,7 +77,7 @@ public class ContentController : Controller
         {
             ModuleId = moduleId,
             Title = title,
-            Type = type,
+            Type = resolvedType,
             Content = content,
             Order = order + 1
         });

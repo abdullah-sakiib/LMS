@@ -1,5 +1,6 @@
 ﻿using LMS.Data;
 using LMS.Models;
+using LMS.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -91,7 +92,7 @@ public class ProgressController : Controller
     }
 
     // GET: My progress across all enrolled courses
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int? courseId)
     {
         var userId = _userManager.GetUserId(User)!;
 
@@ -109,6 +110,28 @@ public class ProgressController : Controller
             .Where(p => p.StudentId == userId && p.IsCompleted)
             .ToListAsync();
 
+        var assignmentCounts = await _db.Assignments
+            .Where(item => enrolledCourseIds.Contains(item.CourseId))
+            .GroupBy(item => item.CourseId)
+            .Select(group => new { CourseId = group.Key, Count = group.Count() })
+            .ToListAsync();
+
+        var quizCounts = await _db.Quizzes
+            .Where(item => enrolledCourseIds.Contains(item.CourseId))
+            .GroupBy(item => item.CourseId)
+            .Select(group => new { CourseId = group.Key, Count = group.Count() })
+            .ToListAsync();
+
+        var submissions = await _db.AssignmentSubmissions
+            .Include(item => item.Assignment)
+            .Where(item => item.StudentId == userId && item.Assignment != null && enrolledCourseIds.Contains(item.Assignment.CourseId))
+            .ToListAsync();
+
+        var quizAttempts = await _db.QuizAttempts
+            .Include(item => item.Quiz)
+            .Where(item => item.StudentId == userId && item.SubmittedAt != null && item.Quiz != null && enrolledCourseIds.Contains(item.Quiz.CourseId))
+            .ToListAsync();
+
         var completedIds = progressRecords.Select(p => p.ContentItemId).ToHashSet();
 
         var result = courses.Select(c =>
@@ -116,17 +139,50 @@ public class ProgressController : Controller
             var allItems = c.Modules.SelectMany(m => m.ContentItems).ToList();
             var completed = allItems.Count(ci => completedIds.Contains(ci.Id));
             var total = allItems.Count;
+            var courseSubmissions = submissions.Where(item => item.Assignment!.CourseId == c.Id).ToList();
+            var graded = courseSubmissions.Where(item => item.Grade.HasValue).ToList();
+            var assignmentAverage = graded.Count == 0
+                ? 0
+                : Math.Round(graded.Average(item => item.Grade!.Value / Math.Max(1, item.Assignment!.MaxScore) * 100), 1);
+            var courseQuizAttempts = quizAttempts.Where(item => item.Quiz!.CourseId == c.Id).ToList();
+            var quizAverage = courseQuizAttempts.Count == 0
+                ? 0
+                : Math.Round(courseQuizAttempts.Average(item => item.Score / Math.Max(1, item.Quiz!.TotalMarks) * 100), 1);
             return new
             {
                 Course = c,
                 Completed = completed,
                 Total = total,
-                Percent = total > 0 ? Math.Round((double)completed / total * 100, 1) : 0.0
+                Percent = total > 0 ? Math.Round((double)completed / total * 100, 1) : 0.0,
+                AssignmentCount = assignmentCounts.FirstOrDefault(item => item.CourseId == c.Id)?.Count ?? 0,
+                QuizCount = quizCounts.FirstOrDefault(item => item.CourseId == c.Id)?.Count ?? 0,
+                GradedAssignments = graded.Count,
+                AssignmentAverage = assignmentAverage,
+                QuizAttempts = courseQuizAttempts.Count,
+                QuizAverage = quizAverage
             };
         }).ToList();
+        var courseCards = result.Select(item => new StudentProgressCourseVM
+        {
+            CourseId = item.Course.Id,
+            Title = item.Course.Title,
+            Completed = item.Completed,
+            Total = item.Total,
+            Percent = item.Percent,
+            AssignmentCount = item.AssignmentCount,
+            QuizCount = item.QuizCount,
+            GradedAssignments = item.GradedAssignments,
+            AssignmentAverage = item.AssignmentAverage,
+            QuizAttempts = item.QuizAttempts,
+            QuizAverage = item.QuizAverage
+        }).OrderBy(item => item.Title).ToList();
 
-        ViewBag.ProgressData = result;
-        return View();
+        var selectedCourseId = courseId ?? courseCards.FirstOrDefault()?.CourseId ?? 0;
+        return View(new StudentProgressVM
+        {
+            Courses = courseCards,
+            SelectedCourseId = selectedCourseId
+        });
     }
 
     private async Task<bool> CanTrackProgressAsync(string userId, int contentItemId, int courseId)

@@ -22,9 +22,16 @@
         }
         else if (Model.Type == "Video")
         {
+            var isExternal = Model.Content.StartsWith("http", StringComparison.OrdinalIgnoreCase) || Model.Content.StartsWith("//");
             <div class="aspect-video">
-                <iframe src="@Model.Content" class="w-full h-full rounded-xl"
-                        allowfullscreen></iframe>
+                @if (isExternal)
+                {
+                    <iframe src="@Model.Content" class="w-full h-full rounded-xl" allowfullscreen></iframe>
+                }
+                else
+                {
+                    <video src="@Model.Content" class="w-full h-full rounded-xl" controls></video>
+                }
             </div>
         }
 

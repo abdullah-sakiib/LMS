@@ -75,11 +75,21 @@
     viewerLabel.textContent = type || 'Resource';
     viewerMedia.replaceChildren();
     if (type === 'Video') {
-      const frame = document.createElement('iframe');
-      frame.src = content;
-      frame.className = 'w-full min-h-[420px] rounded-xl';
-      frame.allowFullscreen = true;
-      viewerMedia.append(frame);
+      const contentValue = content || '';
+      const isExternal = contentValue.startsWith('http') || contentValue.startsWith('//');
+      if (isExternal) {
+        const frame = document.createElement('iframe');
+        frame.src = contentValue;
+        frame.className = 'w-full min-h-[420px] rounded-xl';
+        frame.allowFullscreen = true;
+        viewerMedia.append(frame);
+      } else {
+        const video = document.createElement('video');
+        video.src = contentValue;
+        video.className = 'w-full min-h-[420px] rounded-xl';
+        video.controls = true;
+        viewerMedia.append(video);
+      }
     } else if (type === 'PDF') {
       const frame = document.createElement('iframe');
       frame.src = content;

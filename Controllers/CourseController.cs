@@ -50,6 +50,20 @@ public class CourseController : Controller
 
         var courses = await query.OrderBy(course => course.Title).ToListAsync();
         var cards = await BuildCardsAsync(courses);
+        var defaultCategories = new List<string>
+        {
+            "Computer Science",
+            "Data Science",
+            "Business",
+            "Design",
+            "Marketing",
+            "Languages",
+            "Engineering",
+            "Health",
+            "Arts",
+            "Mathematics",
+            "IT & Networking"
+        };
         var viewModel = new CourseIndexVM
         {
             IsManagementView = isManagementView,
@@ -57,6 +71,7 @@ public class CourseController : Controller
             Courses = cards,
             Categories = courses.Select(course => course.Category)
                 .Where(category => !string.IsNullOrWhiteSpace(category))
+                .Concat(defaultCategories)
                 .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(category => category).ToList(),
             Tags = courses.SelectMany(course => course.TagList)
                 .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(tag => tag).ToList()

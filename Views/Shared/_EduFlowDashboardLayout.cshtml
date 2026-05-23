@@ -1,5 +1,8 @@
+@using LMS.Data
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @inject UserManager<LMS.Models.ApplicationUser> UserManager
+@inject ApplicationDbContext Db
 @{
     var currentUser = await UserManager.GetUserAsync(User);
     var name = currentUser?.FullName ?? "User";
@@ -23,9 +26,28 @@
     var onGrades = controller == "Grade";
     var onAnnouncements = controller == "Announcement";
     var onProfile = controller == "Profile";
-    var onSettings = controller == "Settings";
     var onAdminUsers = controller == "Admin" && action == "Users";
     var onAdminCourses = controller == "Admin" && action == "Courses";
+    LMS.Models.Announcement? latestAnnouncement = null;
+    string? latestAnnouncementPreview = null;
+    if (isStudent && currentUser != null)
+    {
+      var enrolledCourseIds = await Db.Enrollments
+        .Where(item => item.StudentId == currentUser.Id && item.Status == "Approved")
+        .Select(item => item.CourseId)
+        .ToListAsync();
+      latestAnnouncement = await Db.Announcements
+        .Include(item => item.Course)
+        .Include(item => item.Instructor)
+        .Where(item => item.CourseId == null || enrolledCourseIds.Contains(item.CourseId.Value))
+        .OrderByDescending(item => item.CreatedAt)
+        .FirstOrDefaultAsync();
+      if (latestAnnouncement != null)
+      {
+        var body = latestAnnouncement.Body ?? string.Empty;
+        latestAnnouncementPreview = body.Length > 140 ? body[..140] + "..." : body;
+      }
+    }
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -130,7 +152,6 @@
       }
       <p class="nav-section-label text-xs font-semibold text-slate-400 uppercase tracking-widest px-3 pt-4 mb-2">Account</p>
       <a asp-controller="Profile" asp-action="Index" class="nav-item @(onProfile ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"><i class="nav-icon ri-user-line text-xl"></i><span class="nav-label text-sm font-medium">Profile</span><span class="nav-tooltip">Profile</span></a>
-      <a asp-controller="Settings" asp-action="Index" class="nav-item @(onSettings ? "active" : "text-slate-600 hover:bg-primary-50 hover:text-primary-600") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"><i class="nav-icon ri-settings-3-line text-xl"></i><span class="nav-label text-sm font-medium">Settings</span><span class="nav-tooltip">Settings</span></a>
     </nav>
     <div class="p-3 border-t border-slate-100">
       <form asp-controller="Account" asp-action="Logout" method="post">
@@ -147,10 +168,27 @@
         <button id="notif-btn" type="button" onclick="toggleNotif()" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-primary-100 text-slate-500 relative"><i class="ri-notification-3-line text-xl"></i><span class="badge-pulse absolute top-1.5 right-1.5 w-2 h-2 bg-primary-500 rounded-full"></span></button>
         <div id="notif-panel" class="topbar-panel-shell hidden absolute right-0 top-12 w-80 rounded-2xl border overflow-hidden z-50">
           <div class="px-4 py-3 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-cyan-50"><h3 class="font-semibold text-slate-800 text-sm">Notifications</h3></div>
-          <div class="px-4 py-6 text-center"><p class="text-sm text-slate-500">Course announcements are available in your feed.</p></div>
           @if (isStudent)
           {
+            if (latestAnnouncement != null)
+            {
+              <div class="px-4 py-4 space-y-2">
+                <p class="text-xs text-slate-400 uppercase tracking-wide">Latest announcement</p>
+                <p class="text-sm font-semibold text-slate-800">@latestAnnouncement.Title</p>
+                <p class="text-xs text-slate-500">@(latestAnnouncement.IsGlobal ? "Global" : latestAnnouncement.Course?.Title ?? "General") | @(latestAnnouncement.Instructor?.FullName ?? "System")</p>
+                <p class="text-sm text-slate-600 leading-relaxed">@latestAnnouncementPreview</p>
+                <p class="text-[11px] text-slate-400">@latestAnnouncement.CreatedAt.ToString("MMM dd, yyyy HH:mm")</p>
+              </div>
+            }
+            else
+            {
+              <div class="px-4 py-6 text-center"><p class="text-sm text-slate-500">No announcements yet.</p></div>
+            }
             <div class="px-4 py-3 border-t border-indigo-100 text-center bg-indigo-50/70"><a asp-controller="Announcement" asp-action="MyFeed" class="text-xs text-primary-600 font-semibold hover:underline">View announcements</a></div>
+          }
+          else
+          {
+            <div class="px-4 py-6 text-center"><p class="text-sm text-slate-500">Course announcements are available in the announcements page.</p></div>
           }
         </div>
       </div>
@@ -168,7 +206,7 @@
         </button>
         <div id="user-dropdown" class="topbar-panel-shell hidden absolute right-0 top-12 w-52 rounded-2xl border overflow-hidden z-50">
           <div class="px-4 py-3 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-cyan-50"><p class="text-sm font-semibold text-slate-800">@name</p><p class="text-xs text-slate-400">@currentUser?.Email</p></div>
-          <div class="py-1"><a asp-controller="Profile" asp-action="Index" class="topbar-panel-item flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:text-primary-600"><i class="ri-user-line"></i> Profile</a><a asp-controller="Settings" asp-action="Index" class="topbar-panel-item flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:text-primary-600"><i class="ri-settings-3-line"></i> Settings</a><a asp-controller="Course" asp-action="Index" class="topbar-panel-item flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:text-primary-600"><i class="ri-book-open-line"></i> My Courses</a></div>
+          <div class="py-1"><a asp-controller="Profile" asp-action="Index" class="topbar-panel-item flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:text-primary-600"><i class="ri-user-line"></i> Profile</a><a asp-controller="Course" asp-action="Index" class="topbar-panel-item flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:text-primary-600"><i class="ri-book-open-line"></i> My Courses</a></div>
           <div class="border-t border-indigo-100 py-1 bg-rose-50/30"><form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="w-full text-left flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"><i class="ri-logout-box-r-line"></i> Logout</button></form></div>
         </div>
       </div>

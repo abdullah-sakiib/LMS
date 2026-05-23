@@ -48,10 +48,10 @@ else
 {
   <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6 reveal">
     <div class="flex flex-col md:flex-row gap-3">
-      <div class="relative flex-1"><i class="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i><input id="search-input" type="text" oninput="filterCourses()" value="@Model.SearchQuery" placeholder="Search by course name, instructor..." class="input-field w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"/></div>
+      <form asp-action="Index" method="get" class="relative flex-1"><i class="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i><input id="search-input" name="q" type="text" oninput="filterCourses()" value="@Model.SearchQuery" placeholder="Search by course name, instructor, tags..." class="input-field w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"/></form>
       <select id="category-filter" onchange="filterCourses()" class="input-field px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="">All categories</option>@foreach (var category in Model.Categories) { <option value="@category">@category</option> }</select>
       <select id="level-filter" onchange="filterCourses()" class="input-field px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="">All levels</option><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select>
-      <select id="tag-filter" onchange="filterCourses()" class="input-field px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="">All tags</option>@foreach (var tag in Model.Tags) { <option value="@tag.ToLowerInvariant()">#@tag</option> }</select>
+      <input id="tag-filter" type="text" oninput="filterCourses()" placeholder="Tag" class="input-field px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
       <div class="flex items-center gap-1 bg-slate-100 rounded-xl p-1"><button type="button" id="view-grid" class="view-btn active w-8 h-8 rounded-lg" onclick="setView('grid')"><i class="ri-grid-line"></i></button><button type="button" id="view-list" class="view-btn w-8 h-8 rounded-lg text-slate-500" onclick="setView('list')"><i class="ri-list-unordered"></i></button></div>
     </div>
     <div class="flex flex-wrap gap-2 mt-3">
@@ -116,10 +116,10 @@ else
     const search = document.getElementById('search-input').value.toLowerCase();
     const category = document.getElementById('category-filter').value;
     const level = document.getElementById('level-filter').value;
-    const tag = document.getElementById('tag-filter').value;
+    const tag = document.getElementById('tag-filter').value.toLowerCase();
     let count = 0;
     document.querySelectorAll('.course-result').forEach((item, index) => {
-      const matches = (!search || (item.dataset.name + item.dataset.instructor + item.dataset.tags).toLowerCase().includes(search)) && (!category || item.dataset.category === category) && (!level || item.dataset.level === level) && (!tag || item.dataset.tags.split(',').map(value => value.trim()).includes(tag));
+      const matches = (!search || (item.dataset.name + item.dataset.instructor + item.dataset.tags).toLowerCase().includes(search)) && (!category || item.dataset.category === category) && (!level || item.dataset.level === level) && (!tag || item.dataset.tags.toLowerCase().includes(tag));
       item.style.display = matches ? '' : 'none';
       if (matches && index < document.querySelectorAll('#grid-view .course-result').length) count++;
     });
