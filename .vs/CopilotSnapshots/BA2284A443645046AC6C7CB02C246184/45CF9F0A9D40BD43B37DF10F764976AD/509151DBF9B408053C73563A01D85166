@@ -1,0 +1,22 @@
+﻿namespace LMS.ViewModels;
+
+public class DashboardVM
+{
+    public string FullName { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+
+    // Student stats
+    public int EnrolledCourses { get; set; }
+    public int PendingAssignments { get; set; }
+    public int CompletedQuizzes { get; set; }
+
+    // Instructor stats
+    public int TotalCourses { get; set; }
+    public int TotalStudents { get; set; }
+    public int PendingSubmissions { get; set; }
+
+    // Admin stats
+    public int TotalUsers { get; set; }
+    public int TotalCoursesAll { get; set; }
+    public int TotalEnrollments { get; set; }
+}

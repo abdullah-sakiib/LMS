@@ -1,0 +1,191 @@
+@model LMS.ViewModels.ProfileVM
+@{
+    Layout = "_EduFlowDashboardLayout";
+    ViewData["Title"] = "Profile";
+    ViewData["PageTitle"] = "My Profile";
+    ViewData["PageSubtitle"] = "Personal information and account security";
+    var avatar = Model.Profile.ProfilePicture;
+    var initial = Model.DisplayName.Length > 0 ? Model.DisplayName[..1].ToUpperInvariant() : "U";
+}
+@section DashboardStyles {
+<style>
+  .profile-card { background:linear-gradient(180deg,#fff 0%,#f8faff 100%); border-color:#e0e7ff; }
+  .profile-cover { background:linear-gradient(120deg,#312e81,#4f46e5 55%,#06b6d4); }
+  .tab-btn.active { background:#fff; color:#4f46e5; box-shadow:0 2px 8px rgba(79,70,229,.12); }
+  .input-field:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.12); background:#fff; }
+  .btn-primary { background:linear-gradient(135deg,#4f46e5,#6366f1); box-shadow:0 8px 22px rgba(79,70,229,.25); }
+  .profile-stat { min-width:130px; display:flex; align-items:center; gap:.75rem; }
+  .profile-stat-icon { width:2.5rem; height:2.5rem; border-radius:.8rem; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+</style>
+}
+<div class="max-w-6xl mx-auto">
+  <div class="profile-card rounded-2xl border shadow-sm overflow-hidden mb-6">
+    <div class="profile-cover h-28"></div>
+    <div class="px-6 pb-6">
+      <div class="-mt-12 flex flex-col sm:flex-row sm:items-end gap-4">
+        <div class="relative">
+          @if (!string.IsNullOrWhiteSpace(avatar))
+          {
+            <img src="@avatar" alt="Profile photo" class="w-24 h-24 rounded-2xl border-4 border-white object-cover shadow" />
+          }
+          else
+          {
+            <div class="w-24 h-24 rounded-2xl border-4 border-white bg-indigo-600 flex items-center justify-center text-white text-3xl font-semibold shadow">@initial</div>
+          }
+          <button type="button" onclick="document.getElementById('avatar-input').click()" aria-label="Upload profile photo" class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-indigo-100 text-indigo-600 shadow flex items-center justify-center">
+            <i class="ri-camera-line"></i>
+          </button>
+        </div>
+        <div class="flex-1 pt-2 sm:pt-0">
+          <h1 class="text-xl font-bold text-slate-800">@Model.DisplayName</h1>
+          <p class="text-sm text-slate-500">@Model.Role @(!string.IsNullOrWhiteSpace(Model.Profile.City) ? $" | {Model.Profile.City}, {Model.Profile.Country}" : string.Empty)</p>
+        </div>
+        <button type="button" onclick="showTab('security')" class="border border-indigo-200 text-indigo-600 text-sm font-semibold rounded-xl px-4 py-2.5">Change Password</button>
+      </div>
+      <div class="flex flex-wrap items-center gap-5 pt-5 mt-5 border-t border-slate-100">
+        @if (Model.IsStudent)
+        {
+          <div class="profile-stat"><div class="profile-stat-icon bg-indigo-50 text-indigo-600"><i class="ri-book-open-line"></i></div><div><p class="text-lg font-bold text-slate-800">@Model.CourseCount</p><p class="text-xs text-slate-400">Courses</p></div></div>
+          <div class="profile-stat"><div class="profile-stat-icon bg-emerald-50 text-emerald-600"><i class="ri-bar-chart-box-line"></i></div><div><p class="text-lg font-bold text-slate-800">@Model.AverageGrade.ToString("0.0")%</p><p class="text-xs text-slate-400">Average Grade</p></div></div>
+          <div class="profile-stat"><div class="profile-stat-icon bg-amber-50 text-amber-600"><i class="ri-file-check-line"></i></div><div><p class="text-lg font-bold text-slate-800">@Model.Submitted</p><p class="text-xs text-slate-400">Submitted</p></div></div>
+          <div class="profile-stat"><div class="profile-stat-icon bg-violet-50 text-violet-600"><i class="ri-award-line"></i></div><div><p class="text-lg font-bold text-slate-800">@Model.Certificates</p><p class="text-xs text-slate-400">Certificates</p></div></div>
+        }
+        else
+        {
+          <div class="profile-stat"><div class="profile-stat-icon bg-indigo-50 text-indigo-600"><i class="ri-book-open-line"></i></div><div><p class="text-lg font-bold text-slate-800">@Model.CourseCount</p><p class="text-xs text-slate-400">Courses</p></div></div>
+          <div class="profile-stat"><div class="profile-stat-icon bg-cyan-50 text-cyan-600"><i class="ri-group-line"></i></div><div><p class="text-lg font-bold text-slate-800">@Model.TotalStudents</p><p class="text-xs text-slate-400">Students</p></div></div>
+          <div class="profile-stat"><div class="profile-stat-icon bg-amber-50 text-amber-600"><i class="ri-star-line"></i></div><div><p class="text-lg font-bold text-slate-800">@Model.AverageRating.ToString("0.0")</p><p class="text-xs text-slate-400">Avg Rating</p></div></div>
+          <div class="profile-stat"><div class="profile-stat-icon bg-violet-50 text-violet-600"><i class="ri-feedback-line"></i></div><div><p class="text-lg font-bold text-slate-800">@Model.RatedCourses</p><p class="text-xs text-slate-400">Reviewed Courses</p></div></div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-1 bg-gradient-to-r from-indigo-50 to-cyan-50 border border-indigo-100 rounded-xl p-1 mb-6 w-fit">
+    <button type="button" onclick="showTab('general')" id="tab-general" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium text-slate-500"><i class="ri-user-line mr-1.5"></i>General</button>
+    <button type="button" onclick="showTab('academic')" id="tab-academic" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-500"><i class="ri-graduation-cap-line mr-1.5"></i>Academic</button>
+    <button type="button" onclick="showTab('security')" id="tab-security" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-500"><i class="ri-shield-keyhole-line mr-1.5"></i>Security</button>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+      <div id="panel-general">
+        <form method="post" asp-action="Index" enctype="multipart/form-data" id="profile-general-form">
+          <input type="hidden" name="formType" value="general" />
+          <div class="profile-card rounded-2xl border shadow-sm p-6 mb-4">
+            <h2 class="font-semibold text-slate-800 mb-5"><i class="ri-user-line text-primary-500 mr-2"></i>Personal Information</h2>
+            <div class="grid sm:grid-cols-2 gap-4 mb-4">
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">First Name</label><input name="firstName" value="@Model.Profile.FirstName" class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">Last Name</label><input name="lastName" value="@Model.Profile.LastName" class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+            </div>
+            <div class="mb-4"><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">Email Address</label><input type="email" name="email" value="@Model.Profile.Email" required class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+            <div class="mb-4"><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">Phone Number</label><input name="phone" value="@Model.Profile.PhoneNumber" placeholder="+880 XXXXXXXXXX" class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+            <div class="grid sm:grid-cols-2 gap-4 mb-4">
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">City</label><input name="city" value="@Model.Profile.City" class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">Country</label><input name="country" value="@Model.Profile.Country" class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+            </div>
+            <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">Bio</label><textarea name="bio" rows="3" maxlength="500" placeholder="Tell us a little about yourself..." class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm resize-none">@Model.Profile.Bio</textarea><p class="text-xs text-slate-400 mt-1">Max 500 characters</p></div>
+          </div>
+          <div class="flex justify-end"><button class="btn-primary px-6 py-2.5 text-sm font-semibold text-white rounded-xl"><i class="ri-save-line mr-1"></i>Save changes</button></div>
+        </form>
+      </div>
+
+      <div id="panel-academic" class="hidden">
+        <form method="post" asp-action="Index">
+          <input type="hidden" name="formType" value="academic" />
+          <div class="profile-card rounded-2xl border shadow-sm p-6 mb-4">
+            <h2 class="font-semibold text-slate-800 mb-5"><i class="ri-graduation-cap-line text-primary-500 mr-2"></i>Academic Information</h2>
+            <div class="grid sm:grid-cols-2 gap-4 mb-5">
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">@(Model.IsStudent ? "Student ID" : "Teacher ID")</label><input value="@Model.MemberCode" readonly class="w-full px-3.5 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500" /></div>
+              @if (Model.IsStudent)
+              {
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">Department</label><input name="department" value="@Model.Profile.Department" class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+              }
+              else
+              {
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">Working University</label><input name="university" value="@Model.Profile.University" class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">Designation</label><input name="designation" value="@Model.Profile.Designation" class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+              }
+            </div>
+            <label class="block text-xs font-semibold text-slate-600 mb-2 uppercase">@(Model.IsStudent ? "Enrolled Courses" : "Courses You Teach")</label>
+            <div class="space-y-2">
+              @if (!Model.Courses.Any()) { <p class="text-sm text-slate-500">No active courses yet.</p> }
+              @foreach (var course in Model.Courses)
+              {
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div><p class="text-xs font-semibold text-slate-700">@course.Title</p><p class="text-xs text-slate-400">@(Model.IsStudent ? course.Subtitle : $"{course.StudentCount} students")</p></div>
+                  @if (Model.IsStudent)
+                  {
+                    if (course.CertificateAvailable) { <a asp-controller="Course" asp-action="Certificate" asp-route-id="@course.Id" class="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">Certificate</a> }
+                    else { <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">@course.Progress.ToString("0.0")% complete</span> }
+                  }
+                  else { <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">@course.Rating.ToString("0.0") rating</span> }
+                </div>
+              }
+            </div>
+          </div>
+          <div class="flex justify-end"><button class="btn-primary px-6 py-2.5 text-sm font-semibold text-white rounded-xl"><i class="ri-save-line mr-1"></i>Save changes</button></div>
+        </form>
+      </div>
+
+      <div id="panel-security" class="hidden">
+        <form method="post" asp-action="Index">
+          <input type="hidden" name="formType" value="security" />
+          <div class="profile-card rounded-2xl border shadow-sm p-6 mb-4">
+            <h2 class="font-semibold text-slate-800 mb-5"><i class="ri-shield-keyhole-line text-primary-500 mr-2"></i>Change Password</h2>
+            <div class="space-y-4">
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">Current Password</label><input type="password" name="currentPassword" required class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">New Password</label><input type="password" name="newPassword1" minlength="8" required class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /><p class="text-xs text-slate-400 mt-1">Use at least 8 characters.</p></div>
+              <div><label class="block text-xs font-semibold text-slate-600 mb-1.5 uppercase">Confirm New Password</label><input type="password" name="newPassword2" minlength="8" required class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" /></div>
+            </div>
+          </div>
+          <div class="flex justify-end"><button class="btn-primary px-6 py-2.5 text-sm font-semibold text-white rounded-xl"><i class="ri-shield-check-line mr-1"></i>Update password</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="space-y-5">
+      <div class="profile-card rounded-2xl border shadow-sm p-5">
+        <h3 class="font-semibold text-slate-700 text-sm mb-3">Profile Photo</h3>
+        <form method="post" asp-action="Index" enctype="multipart/form-data" class="flex flex-col items-center gap-3">
+          <input type="hidden" name="formType" value="photo" />
+          @if (!string.IsNullOrWhiteSpace(avatar)) { <img id="avatar-preview" src="@avatar" class="w-20 h-20 rounded-2xl object-cover shadow" /> }
+          else { <div id="avatar-fallback" class="w-20 h-20 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-2xl font-semibold">@initial</div> }
+          <input type="file" name="avatar" id="avatar-input" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" onchange="this.form.submit()" />
+          <button type="button" onclick="document.getElementById('avatar-input').click()" class="text-xs font-medium text-primary-600 border border-primary-200 px-4 py-2 rounded-xl"><i class="ri-upload-2-line mr-1"></i>Upload photo</button>
+          <p class="text-xs text-slate-400 text-center">JPG, PNG, GIF or WEBP. Max 2MB.</p>
+        </form>
+      </div>
+      <div class="profile-card rounded-2xl border shadow-sm p-5">
+        <h3 class="font-semibold text-slate-700 text-sm mb-3">Account Details</h3>
+        <div class="space-y-3 text-xs">
+          <p class="flex justify-between"><span class="text-slate-500">Role</span><span class="font-semibold text-primary-600 bg-primary-50 px-2 rounded-full">@Model.Role</span></p>
+          <p class="flex justify-between"><span class="text-slate-500">Member since</span><span class="font-medium text-slate-700">@Model.Profile.CreatedAt.ToString("MMM dd, yyyy")</span></p>
+          <p class="flex justify-between"><span class="text-slate-500">Account status</span><span class="font-semibold text-emerald-600">Active</span></p>
+        </div>
+      </div>
+      @if (Model.IsStudent && Model.GradeSummary.Any())
+      {
+        <div class="profile-card rounded-2xl border shadow-sm p-5">
+          <h3 class="font-semibold text-slate-700 text-sm mb-3">Grade Summary</h3>
+          @foreach (var grade in Model.GradeSummary)
+          {
+            <div class="mb-3"><div class="flex justify-between text-xs mb-1"><span class="text-slate-600">@grade.Course</span><span class="font-semibold">@grade.AveragePercent.ToString("0.0")/100</span></div><div class="h-1.5 bg-slate-100 rounded-full"><div class="h-1.5 bg-indigo-500 rounded-full" style="width:@Math.Min(grade.AveragePercent, 100)%"></div></div></div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+@section DashboardScripts {
+<script>
+  function showTab(tab) {
+    ['general','academic','security'].forEach(name => {
+      document.getElementById('panel-' + name).classList.toggle('hidden', name !== tab);
+      document.getElementById('tab-' + name).classList.toggle('active', name === tab);
+    });
+  }
+  const requestedTab = new URLSearchParams(window.location.search).get('tab');
+  if (requestedTab === 'security' || requestedTab === 'academic') showTab(requestedTab);
+</script>
+}

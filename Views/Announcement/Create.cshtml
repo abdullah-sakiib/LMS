@@ -1,0 +1,27 @@
+﻿@{
+    ViewData["Title"] = "New Announcement";
+    int courseId = ViewBag.CourseId;
+}
+
+<div class="max-w-xl mx-auto bg-white rounded-2xl shadow-sm p-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-5">New Announcement</h2>
+    <form asp-action="Create" method="post">
+        <input type="hidden" name="courseId" value="@courseId" />
+        <div class="space-y-4">
+            <div>
+                <label class="text-sm font-medium text-gray-700">Title</label>
+                <input name="title" required
+                       class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            </div>
+            <div>
+                <label class="text-sm font-medium text-gray-700">Body</label>
+                <textarea name="body" rows="5" required
+                          class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"></textarea>
+            </div>
+        </div>
+        <button type="submit"
+                class="mt-5 w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-sm transition">
+            Post Announcement
+        </button>
+    </form>
+</div>

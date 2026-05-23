@@ -1,0 +1,96 @@
+﻿@model LMS.Models.Assignment
+@{
+    ViewData["Title"] = Model.Title;
+    bool isInstructor = ViewBag.IsInstructor;
+    var existing = ViewBag.ExistingSubmission as LMS.Models.AssignmentSubmission;
+    var isPast = Model.Deadline < DateTime.UtcNow;
+}
+
+<div class="max-w-4xl mx-auto space-y-5">
+    <!-- Assignment Info -->
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="text-xl font-bold text-gray-800">@Model.Title</h2>
+        <p class="text-gray-500 text-sm mt-2">@Model.Description</p>
+        <p class="text-sm text-slate-500 mt-2">Maximum score: @Model.MaxScore</p>
+        @if (!string.IsNullOrWhiteSpace(Model.AttachmentPath)) { <a href="@Model.AttachmentPath" target="_blank" class="mt-2 inline-flex text-sm text-indigo-600">View assignment attachment</a> }
+        <span class="mt-3 inline-block text-xs px-2 py-0.5 rounded-full
+            @(isPast ? "bg-red-100 text-red-500" : "bg-green-100 text-green-600")">
+            Due: @Model.Deadline.ToString("MMM dd, yyyy hh:mm tt")
+        </span>
+    </div>
+
+    @if (!isInstructor)
+    {
+        <!-- Student Submit -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h3 class="font-semibold text-gray-700 mb-3">
+                @(existing != null ? "Your Submission" : "Submit Assignment")
+            </h3>
+
+            @if (existing != null)
+            {
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                    <p class="text-sm text-green-700">Submitted: <strong>@existing.OriginalFileName</strong></p>
+                    <p class="text-xs text-gray-400 mt-1">@existing.SubmittedAt.ToString("MMM dd, yyyy hh:mm tt")</p>
+                    @if (existing.Grade.HasValue)
+                    {
+                        <p class="text-sm text-gray-700 mt-2">Grade: <strong>@existing.Grade / @Model.MaxScore</strong></p>
+                        <p class="text-sm text-gray-500">Feedback: @existing.Feedback</p>
+                    }
+                </div>
+            }
+
+            @if (!isPast || existing == null)
+            {
+                <form asp-action="Submit" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="assignmentId" value="@Model.Id" />
+                    <input type="file" name="file" required
+                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <textarea name="comment" rows="2" placeholder="Optional note to your instructor" class="mt-3 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">@existing?.Comment</textarea>
+                    <input type="hidden" name="returnToWorkspace" value="false" />
+                    <button type="submit"
+                            class="mt-3 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm transition">
+                        @(existing != null ? "Resubmit" : "Submit")
+                    </button>
+                </form>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Instructor: Submissions list -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h3 class="font-semibold text-gray-700 mb-4">Submissions (@Model.Submissions.Count)</h3>
+            @if (!Model.Submissions.Any())
+            {
+                <p class="text-gray-400 text-sm">No submissions yet.</p>
+            }
+            else
+            {
+                <div class="space-y-3">
+                    @foreach (var sub in Model.Submissions)
+                    {
+                        <div class="flex items-center justify-between border border-gray-100 rounded-xl p-4">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">@sub.Student?.FullName</p>
+                                <a href="@sub.FilePath" target="_blank"
+                                   class="text-xs text-orange-500 hover:underline">@sub.OriginalFileName</a>
+                                <p class="text-xs text-gray-400 mt-0.5">@sub.SubmittedAt.ToString("MMM dd, yyyy")</p>
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                @if (sub.Grade.HasValue)
+                                {
+                                    <span class="text-green-600 font-semibold">@sub.Grade / @Model.MaxScore</span>
+                                }
+                                else
+                                {
+                                    <span class="text-yellow-500">Not graded</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>

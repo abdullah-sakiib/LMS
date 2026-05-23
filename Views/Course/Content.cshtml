@@ -1,0 +1,120 @@
+@model LMS.ViewModels.CourseContentVM
+@{
+    var course = Model.Course;
+    ViewData["Title"] = $"{course.Title} Content";
+    ViewData["PageTitle"] = course.Title;
+    ViewData["PageSubtitle"] = "Learning content";
+}
+<style>
+  .content-card { background:linear-gradient(180deg,#fff,#f8faff); border-color:#e0e7ff; }
+  .resource-item:hover { background:linear-gradient(90deg,#eef2ff,#ecfeff); border-color:#a5b4fc; }
+</style>
+<div class="max-w-7xl mx-auto space-y-6">
+  @Html.AntiForgeryToken()
+  <div class="content-card rounded-2xl border shadow-sm p-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div><h2 class="text-lg font-semibold text-slate-800">Course Content</h2><p class="text-sm text-slate-500 mt-1">@Model.Modules.Count modules, @Model.TotalResources resources, @Model.VideoResources videos</p></div>
+      <div class="flex items-center gap-4">
+        @if (Model.IsStudent) { <div class="text-right"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Progress</p><p id="course-progress-label" class="text-sm font-semibold text-indigo-600">@Model.ProgressPercent.ToString("0.#")%</p></div> }
+        <a asp-action="Details" asp-route-id="@course.Id" class="text-sm text-indigo-600 hover:text-indigo-700">Back to course details</a>
+      </div>
+    </div>
+    @if (Model.IsStudent)
+    {
+      <div class="mt-4 h-2 bg-slate-100 rounded-full overflow-hidden"><div id="course-progress-bar" class="h-full bg-indigo-500 rounded-full" style="width:@Model.ProgressPercent.ToString("0.#")%"></div></div>
+      @if (Model.CertificateAvailable) { <a asp-action="Certificate" asp-route-id="@course.Id" class="mt-4 inline-flex px-4 py-2 rounded-xl border border-emerald-300 text-emerald-700 text-sm font-semibold hover:bg-emerald-50">Download Certificate</a> }
+    }
+  </div>
+  <div class="grid lg:grid-cols-12 gap-5">
+    <div class="lg:col-span-5 space-y-3">
+      @for (var moduleIndex = 0; moduleIndex < Model.Modules.Count; moduleIndex++)
+      {
+        var module = Model.Modules[moduleIndex];
+        <details class="content-card rounded-2xl border shadow-sm overflow-hidden" @(moduleIndex == 0 ? "open" : null)>
+          <summary class="list-none cursor-pointer px-4 py-4 flex items-start justify-between gap-3">
+            <p class="font-semibold text-slate-800">@module.Title</p><i class="ri-arrow-down-s-line text-slate-400"></i>
+          </summary>
+          <div class="px-4 pb-4 border-t border-slate-100">
+            <div class="space-y-2 mt-3">
+              @foreach (var resource in module.ContentItems.OrderBy(item => item.Order))
+              {
+                var completed = Model.CompletedResourceIds.Contains(resource.Id);
+                <div class="resource-item border border-indigo-100 rounded-xl px-3 py-2.5 transition">
+                  <button type="button" onclick="showResource(this)" class="w-full text-left" data-title="@resource.Title" data-type="@resource.Type" data-content="@resource.Content">
+                    <div class="flex items-center justify-between gap-2"><p class="text-sm font-medium text-slate-700">@resource.Title</p><span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">@resource.Type</span></div>
+                  </button>
+                  @if (Model.IsStudent)
+                  {
+                    <button type="button" data-progress-id="@resource.Id" data-completed="@completed.ToString().ToLowerInvariant()" onclick="toggleProgress(this, @resource.Id)" class="mt-2 w-full px-3 py-2 rounded-xl text-sm font-semibold @(completed ? "border border-amber-200 text-amber-700" : "bg-emerald-600 text-white")">@(completed ? "Mark As Not Finished" : "Finish Resource")</button>
+                  }
+                </div>
+              }
+              @if (!module.ContentItems.Any()) { <p class="text-sm text-slate-400">No resources in this module yet.</p> }
+            </div>
+          </div>
+        </details>
+      }
+      @if (!Model.Modules.Any()) { <div class="content-card rounded-2xl border shadow-sm p-8 text-center"><p class="font-semibold text-slate-700">No modules yet</p><p class="text-sm text-slate-400 mt-1">Your instructor has not uploaded content for this course yet.</p></div> }
+    </div>
+    <aside class="lg:col-span-7">
+      <div class="content-card rounded-2xl border shadow-sm p-5 lg:sticky lg:top-4">
+        <div class="flex items-center justify-between gap-2 mb-3"><h3 id="viewer-title" class="font-semibold text-slate-800">@(Model.SelectedResource?.Title ?? "Select a resource")</h3><span id="viewer-label" class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">@(Model.SelectedResource?.Type ?? "Resource")</span></div>
+        <div id="viewer-media" class="w-full rounded-xl bg-slate-100 border border-slate-100 overflow-hidden min-h-[320px] flex items-center justify-center"></div>
+        <p id="viewer-description" class="text-sm text-slate-500 mt-3">Choose any resource from the module list to preview or open it in this dedicated panel.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+@section Scripts {
+<script>
+  const viewerTitle = document.getElementById('viewer-title');
+  const viewerLabel = document.getElementById('viewer-label');
+  const viewerMedia = document.getElementById('viewer-media');
+  function renderResource(title, type, content) {
+    viewerTitle.textContent = title || 'Untitled resource';
+    viewerLabel.textContent = type || 'Resource';
+    viewerMedia.replaceChildren();
+    if (type === 'Video') {
+      const frame = document.createElement('iframe');
+      frame.src = content;
+      frame.className = 'w-full min-h-[420px] rounded-xl';
+      frame.allowFullscreen = true;
+      viewerMedia.append(frame);
+    } else if (type === 'PDF') {
+      const frame = document.createElement('iframe');
+      frame.src = content;
+      frame.className = 'w-full min-h-[520px] rounded-xl';
+      viewerMedia.append(frame);
+    } else {
+      const text = document.createElement('p');
+      text.className = 'whitespace-pre-wrap text-sm text-slate-700 p-6 w-full self-start';
+      text.textContent = content || 'No content available for this resource.';
+      viewerMedia.append(text);
+    }
+  }
+  function showResource(button) { renderResource(button.dataset.title, button.dataset.type, button.dataset.content); }
+  async function toggleProgress(button, contentItemId) {
+    const token = document.querySelector('input[name=__RequestVerificationToken]').value;
+    const response = await fetch('/Progress/Toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `contentItemId=${contentItemId}&courseId=@course.Id&__RequestVerificationToken=${encodeURIComponent(token)}`
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    button.dataset.completed = data.isCompleted;
+    button.textContent = data.isCompleted ? 'Mark As Not Finished' : 'Finish Resource';
+    button.className = `mt-2 w-full px-3 py-2 rounded-xl text-sm font-semibold ${data.isCompleted ? 'border border-amber-200 text-amber-700' : 'bg-emerald-600 text-white'}`;
+    document.getElementById('course-progress-label').textContent = `${data.percent}%`;
+    document.getElementById('course-progress-bar').style.width = `${data.percent}%`;
+  }
+  @if (Model.SelectedResource != null)
+  {
+    <text>renderResource(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SelectedResource.Title)), @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SelectedResource.Type)), @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SelectedResource.Content)));</text>
+  }
+  else
+  {
+    <text>viewerMedia.textContent = 'Select a module resource to open it here.';</text>
+  }
+</script>
+}

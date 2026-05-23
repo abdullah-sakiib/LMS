@@ -1,0 +1,164 @@
+﻿using LMS.Data;
+using LMS.Models;
+using LMS.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace LMS.Controllers;
+
+[Authorize]
+public class AssignmentController : Controller
+{
+    private readonly ApplicationDbContext _db;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IWebHostEnvironment _env;
+
+    public AssignmentController(ApplicationDbContext db, UserManager<ApplicationUser> userManager, IWebHostEnvironment env)
+    {
+        _db = db;
+        _userManager = userManager;
+        _env = env;
+    }
+
+    // List assignments for a course
+    public async Task<IActionResult> Index(int courseId)
+    {
+        var course = await _db.Courses.FindAsync(courseId);
+        if (course == null) return NotFound();
+
+        var assignments = await _db.Assignments
+            .Where(a => a.CourseId == courseId)
+            .OrderBy(a => a.Deadline)
+            .ToListAsync();
+
+        ViewBag.Course = course;
+        ViewBag.IsInstructor = User.IsInRole("Instructor") || User.IsInRole("Admin");
+        return View(assignments);
+    }
+
+    // GET: Create
+    [Authorize(Roles = "Instructor,Admin")]
+    public IActionResult Create(int courseId)
+    {
+        return View(new AssignmentVM { CourseId = courseId });
+    }
+
+    // POST: Create
+    [HttpPost, Authorize(Roles = "Instructor,Admin")]
+    public async Task<IActionResult> Create(AssignmentVM vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        _db.Assignments.Add(new Assignment
+        {
+            CourseId = vm.CourseId,
+            Title = vm.Title,
+            Description = vm.Description,
+            Deadline = vm.Deadline
+        });
+        await _db.SaveChangesAsync();
+        return RedirectToAction("Index", new { courseId = vm.CourseId });
+    }
+
+    // GET: Edit
+    [Authorize(Roles = "Instructor,Admin")]
+    public async Task<IActionResult> Edit(int id)
+    {
+        var a = await _db.Assignments.FindAsync(id);
+        if (a == null) return NotFound();
+        return View(new AssignmentVM
+        {
+            Id = a.Id,
+            CourseId = a.CourseId,
+            Title = a.Title,
+            Description = a.Description,
+            Deadline = a.Deadline
+        });
+    }
+
+    // POST: Edit
+    [HttpPost, Authorize(Roles = "Instructor,Admin")]
+    public async Task<IActionResult> Edit(AssignmentVM vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+        var a = await _db.Assignments.FindAsync(vm.Id);
+        if (a == null) return NotFound();
+
+        a.Title = vm.Title;
+        a.Description = vm.Description;
+        a.Deadline = vm.Deadline;
+        await _db.SaveChangesAsync();
+        return RedirectToAction("Index", new { courseId = vm.CourseId });
+    }
+
+    // POST: Delete
+    [HttpPost, Authorize(Roles = "Instructor,Admin")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var a = await _db.Assignments.FindAsync(id);
+        if (a == null) return NotFound();
+        int courseId = a.CourseId;
+        _db.Assignments.Remove(a);
+        await _db.SaveChangesAsync();
+        return RedirectToAction("Index", new { courseId });
+    }
+
+    // GET: Details + submissions (instructor) or submit form (student)
+    public async Task<IActionResult> Details(int id)
+    {
+        var assignment = await _db.Assignments
+            .Include(a => a.Course)
+            .Include(a => a.Submissions).ThenInclude(s => s.Student)
+            .FirstOrDefaultAsync(a => a.Id == id);
+
+        if (assignment == null) return NotFound();
+
+        var userId = _userManager.GetUserId(User);
+        ViewBag.IsInstructor = User.IsInRole("Instructor") || User.IsInRole("Admin");
+        ViewBag.ExistingSubmission = assignment.Submissions.FirstOrDefault(s => s.StudentId == userId);
+        return View(assignment);
+    }
+
+    // POST: Submit assignment (student)
+    [HttpPost, Authorize(Roles = "Student")]
+    public async Task<IActionResult> Submit(int assignmentId, IFormFile file)
+    {
+        var assignment = await _db.Assignments.FindAsync(assignmentId);
+        if (assignment == null) return NotFound();
+
+        if (file == null || file.Length == 0)
+        {
+            TempData["Error"] = "Please select a file.";
+            return RedirectToAction("Details", new { id = assignmentId });
+        }
+
+        var userId = _userManager.GetUserId(User)!;
+
+        // Remove previous submission if any
+        var existing = await _db.AssignmentSubmissions
+            .FirstOrDefaultAsync(s => s.AssignmentId == assignmentId && s.StudentId == userId);
+        if (existing != null) _db.AssignmentSubmissions.Remove(existing);
+
+        // Save file
+        var uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "submissions");
+        Directory.CreateDirectory(uploadsDir);
+        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+        var filePath = Path.Combine(uploadsDir, fileName);
+        using (var stream = new FileStream(filePath, FileMode.Create))
+            await file.CopyToAsync(stream);
+
+        _db.AssignmentSubmissions.Add(new AssignmentSubmission
+        {
+            AssignmentId = assignmentId,
+            StudentId = userId,
+            FilePath = $"/uploads/submissions/{fileName}",
+            OriginalFileName = file.FileName
+        });
+
+        await _db.SaveChangesAsync();
+        TempData["Success"] = "Assignment submitted!";
+        return RedirectToAction("Details", new { id = assignmentId });
+    }
+}

@@ -1,0 +1,99 @@
+@model LMS.ViewModels.AdminDashboardVM
+@{
+    Layout = "_EduFlowDashboardLayout";
+    ViewData["Title"] = "Admin Dashboard";
+    ViewData["PageTitle"] = "Admin Dashboard";
+    ViewData["PageSubtitle"] = "Site-wide overview and management";
+    var totalRoles = Math.Max(Model.Students + Model.Instructors, 1);
+    var studentPercent = Math.Round((double)Model.Students / totalRoles * 100);
+    var instructorPercent = Math.Round((double)Model.Instructors / totalRoles * 100);
+    var registrationMax = Math.Max(Model.RegistrationsByDay.DefaultIfEmpty(0).Max(), 1);
+    var dayLabels = new[] { "S", "M", "T", "W", "T", "F", "S" };
+}
+@section DashboardStyles {
+<style>
+  .stat-card { transition:transform .25s ease, box-shadow .25s ease; }
+  .stat-card:hover { transform:translateY(-3px); box-shadow:0 16px 40px rgba(99,102,241,.10); }
+  .reveal { animation:adminUp .5s ease both; }
+  @@keyframes adminUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+  .user-row:hover, .course-row:hover { background:#f8f7ff; }
+  .donut { width:88px; height:88px; border-radius:50%; background:conic-gradient(#6366f1 0% @(studentPercent)%, #a5b4fc @(studentPercent)% 100%); position:relative; }
+  .donut::after { content:''; position:absolute; inset:18px; border-radius:50%; background:white; }
+  .badge-active { background:#f0fdf4; color:#16a34a; } .badge-inactive { background:#f1f5f9; color:#64748b; } .badge-pending { background:#fffbeb; color:#d97706; }
+</style>
+}
+<div class="bg-gradient-to-br from-cyan-100 via-indigo-100 to-fuchsia-100 rounded-2xl p-6 mb-6 relative overflow-hidden reveal border border-slate-100">
+  <div class="absolute -right-8 -top-8 w-40 h-40 bg-cyan-300/40 rounded-full"></div><div class="absolute right-16 bottom-0 w-20 h-20 bg-fuchsia-300/40 rounded-full"></div>
+  <div class="absolute right-6 top-1/2 -translate-y-1/2 hidden md:block"><i class="ri-shield-star-line text-indigo-300/50 text-8xl"></i></div>
+  <div class="relative z-10">
+    <p class="text-indigo-700 text-sm font-medium mb-1" id="greeting-time">Good morning,</p>
+    <h1 class="text-slate-800 font-bold text-2xl mb-1">@Model.FullName</h1>
+    <p class="text-slate-600 text-sm">Platform is running smoothly. <span class="text-emerald-600 font-semibold">All systems operational.</span></p>
+    <div class="flex flex-wrap gap-3 mt-4">
+      <a asp-action="Courses" class="inline-flex items-center gap-2 bg-white text-slate-800 font-semibold text-sm px-4 py-2 rounded-xl shadow"><i class="ri-settings-3-line"></i> Manage Courses</a>
+      <a href="#users-section" class="inline-flex items-center gap-2 bg-indigo-600 text-white font-medium text-sm px-4 py-2 rounded-xl"><i class="ri-group-line"></i> Manage Users</a>
+    </div>
+  </div>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4 reveal">
+  <div class="stat-card rounded-2xl p-5 border border-indigo-200 bg-gradient-to-br from-indigo-50 to-blue-100 shadow-sm"><div class="flex items-center justify-between mb-3"><div class="w-10 h-10 bg-primary-50 rounded-xl flex items-center justify-center"><i class="ri-group-line text-primary-600 text-lg"></i></div></div><p class="text-2xl font-bold text-slate-800">@Model.TotalUsers</p><p class="text-xs text-slate-500">Total users</p></div>
+  <div class="stat-card rounded-2xl p-5 border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-100 shadow-sm"><div class="flex items-center justify-between mb-3"><div class="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center"><i class="ri-book-open-line text-violet-600 text-lg"></i></div></div><p class="text-2xl font-bold text-slate-800">@Model.TotalCourses</p><p class="text-xs text-slate-500">Total courses</p></div>
+  <div class="stat-card rounded-2xl p-5 border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-100 shadow-sm"><div class="flex items-center justify-between mb-3"><div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center"><i class="ri-file-list-3-line text-amber-500 text-lg"></i></div></div><p class="text-2xl font-bold text-slate-800">@Model.TotalSubmissions</p><p class="text-xs text-slate-500">Submissions total</p></div>
+  <div class="stat-card rounded-2xl p-5 border border-emerald-200 bg-gradient-to-br from-emerald-50 to-lime-100 shadow-sm"><div class="flex items-center justify-between mb-3"><div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center"><i class="ri-user-star-line text-emerald-600 text-lg"></i></div></div><p class="text-2xl font-bold text-slate-800">@Model.Instructors</p><p class="text-xs text-slate-500">Instructors</p></div>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 reveal">
+  <div class="stat-card rounded-2xl p-5 border border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-100 shadow-sm"><div class="w-10 h-10 bg-sky-50 rounded-xl flex items-center justify-center mb-3"><i class="ri-user-line text-sky-600 text-lg"></i></div><p class="text-2xl font-bold text-slate-800">@Model.Students</p><p class="text-xs text-slate-500">Students</p></div>
+  <div class="stat-card rounded-2xl p-5 border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 shadow-sm"><div class="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center mb-3"><i class="ri-links-line text-rose-500 text-lg"></i></div><p class="text-2xl font-bold text-slate-800">@Model.TotalEnrollments</p><p class="text-xs text-slate-500">Enrollments</p></div>
+  <div class="stat-card rounded-2xl p-5 border border-teal-200 bg-gradient-to-br from-teal-50 to-cyan-100 shadow-sm"><div class="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center mb-3"><i class="ri-questionnaire-line text-teal-600 text-lg"></i></div><p class="text-2xl font-bold text-slate-800">@Model.TotalQuizAttempts</p><p class="text-xs text-slate-500">Quiz attempts</p></div>
+  <div class="stat-card rounded-2xl p-5 border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-100 shadow-sm"><div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center mb-3"><i class="ri-shield-check-line text-orange-500 text-lg"></i></div><p class="text-2xl font-bold text-slate-800">99.8%</p><p class="text-xs text-slate-500">System uptime</p></div>
+</div>
+<div class="grid lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <div id="users-section" class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 reveal">
+      <div class="flex items-center justify-between mb-4"><h2 class="font-semibold text-slate-800 text-base">Recent Users</h2><div class="flex items-center gap-2"><select onchange="filterUsers(this.value)" class="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-600 bg-white"><option value="all">All roles</option><option value="Student">Students</option><option value="Instructor">Instructors</option></select><a asp-action="Users" class="inline-flex items-center gap-1 text-xs font-semibold text-white bg-primary-500 px-3 py-1.5 rounded-lg"><i class="ri-external-link-line"></i> Full list</a></div></div>
+      <div class="overflow-x-auto"><table class="w-full text-sm" id="users-table"><thead><tr class="text-xs text-slate-400 font-semibold uppercase tracking-wide border-b border-slate-100"><th class="text-left pb-3 pr-4">User</th><th class="text-left pb-3 pr-4">Role</th><th class="text-left pb-3">Joined</th></tr></thead><tbody class="divide-y divide-slate-50">
+        @foreach (var user in Model.RecentUsers)
+        {
+          <tr class="user-row" data-role="@user.Role"><td class="py-3 pr-4"><div class="flex items-center gap-2.5"><div class="w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center font-semibold">@user.FullName.Substring(0, 1).ToUpper()</div><div><p class="text-xs font-semibold text-slate-700">@user.FullName</p><p class="text-xs text-slate-400">@user.Email</p></div></div></td><td class="py-3 pr-4"><span class="text-xs @(user.Role == "Instructor" ? "bg-violet-50 text-violet-600" : "bg-primary-50 text-primary-600") font-medium px-2 py-0.5 rounded-full">@user.Role</span></td><td class="py-3"><p class="text-xs text-slate-500">@user.JoinedAt.ToString("MMM d, yyyy")</p></td></tr>
+        }
+        @if (!Model.RecentUsers.Any()) { <tr><td colspan="3" class="py-6 text-center text-xs text-slate-400">No users found.</td></tr> }
+      </tbody></table></div>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 reveal">
+      <div class="flex items-center justify-between mb-4"><h2 class="font-semibold text-slate-800 text-base">Course Overview</h2><a asp-action="Courses" class="text-xs text-primary-500 font-medium flex items-center gap-1">View all <i class="ri-arrow-right-line"></i></a></div>
+      <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-xs text-slate-400 font-semibold uppercase tracking-wide border-b border-slate-100"><th class="text-left pb-3 pr-4">Course</th><th class="text-left pb-3 pr-4">Instructor</th><th class="text-left pb-3 pr-4">Students</th><th class="text-left pb-3">Status</th></tr></thead><tbody class="divide-y divide-slate-50">
+        @foreach (var course in Model.Courses)
+        {
+          <tr class="course-row"><td class="py-3 pr-4"><a asp-controller="Course" asp-action="Details" asp-route-id="@course.Id" class="text-xs font-semibold text-slate-700">@course.Title</a></td><td class="py-3 pr-4 text-xs text-slate-500">@course.Instructor</td><td class="py-3 pr-4 text-xs font-semibold text-slate-700">@course.Students</td><td class="py-3"><span class="@(course.Status == "Published" ? "badge-active" : "badge-pending") text-xs font-semibold px-2 py-0.5 rounded-full">@course.Status</span></td></tr>
+        }
+        @if (!Model.Courses.Any()) { <tr><td colspan="4" class="py-6 text-center text-xs text-slate-400">No courses found.</td></tr> }
+      </tbody></table></div>
+    </div>
+  </div>
+  <div class="space-y-6">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 reveal"><h2 class="font-semibold text-slate-800 text-base mb-4">User Distribution</h2><div class="flex items-center gap-5"><div class="donut flex-shrink-0"></div><div class="space-y-2.5 flex-1"><div class="flex justify-between text-xs"><span class="text-slate-600">Students</span><b>@Model.Students (@studentPercent%)</b></div><div class="flex justify-between text-xs"><span class="text-slate-600">Instructors</span><b>@Model.Instructors (@instructorPercent%)</b></div></div></div></div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 reveal">
+      <div class="flex items-center justify-between mb-1"><h2 class="font-semibold text-slate-800 text-base">New Registrations</h2><span class="text-xs text-slate-400">Last 7 days</span></div>
+      <p class="text-xs text-slate-400 mb-4">Daily sign-ups across all roles</p>
+      <div class="flex items-end justify-between gap-1.5 h-20">
+        @for (var i = 0; i < Model.RegistrationsByDay.Count; i++)
+        {
+          var height = Math.Max(12, (int)Math.Round((double)Model.RegistrationsByDay[i] / registrationMax * 100));
+          <div class="flex flex-col items-center gap-1 flex-1"><span class="text-xs text-slate-500">@Model.RegistrationsByDay[i]</span><div class="w-full bg-primary-300 rounded-t-sm" style="height:@height%"></div><span class="text-xs text-slate-400">@dayLabels[i]</span></div>
+        }
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 reveal"><h2 class="font-semibold text-slate-800 text-base mb-4">System Status</h2><div class="space-y-3">@foreach (var service in new[] { "Web server", "Database", "File storage", "Auth service" }) { <div class="flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span class="text-xs text-slate-600">@service</span></div><span class="text-xs font-semibold text-emerald-600">Operational</span></div> }</div></div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 reveal"><h2 class="font-semibold text-slate-800 text-base mb-4">Quick Actions</h2><div class="grid grid-cols-2 gap-2.5"><a asp-action="Users" class="flex flex-col items-center gap-2 p-3 rounded-xl bg-primary-50 text-primary-700"><i class="ri-group-line text-primary-600 text-xl"></i><span class="text-xs font-medium">Manage Users</span></a><a asp-action="Courses" class="flex flex-col items-center gap-2 p-3 rounded-xl bg-violet-50 text-violet-700"><i class="ri-book-open-line text-violet-600 text-xl"></i><span class="text-xs font-medium">All Courses</span></a></div></div>
+  </div>
+</div>
+@section DashboardScripts {
+<script>
+  const greetEl = document.getElementById('greeting-time');
+  const hour = new Date().getHours();
+  if (greetEl) greetEl.textContent = hour < 12 ? 'Good morning,' : hour < 17 ? 'Good afternoon,' : 'Good evening,';
+  function filterUsers(role) {
+    document.querySelectorAll('#users-table tbody tr[data-role]').forEach(row => row.style.display = role === 'all' || row.dataset.role === role ? '' : 'none');
+  }
+</script>
+}

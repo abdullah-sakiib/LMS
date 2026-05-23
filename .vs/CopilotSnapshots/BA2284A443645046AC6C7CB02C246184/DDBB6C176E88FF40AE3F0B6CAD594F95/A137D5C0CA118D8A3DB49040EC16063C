@@ -1,0 +1,145 @@
+﻿@model LMS.Models.Course
+@inject UserManager<LMS.Models.ApplicationUser> UserManager
+@{
+    ViewData["Title"] = Model.Title;
+    var isInstructor = User.IsInRole("Instructor") || User.IsInRole("Admin");
+    var isStudent = User.IsInRole("Student");
+    var userId = UserManager.GetUserId(User);
+    var enrollment = Model.Enrollments.FirstOrDefault(e => e.StudentId == userId);
+}
+
+<div class="max-w-4xl mx-auto">
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="bg-green-50 text-green-700 text-sm px-4 py-3 rounded-xl mb-4">
+            @TempData["Success"]
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="bg-red-50 text-red-500 text-sm px-4 py-3 rounded-xl mb-4">
+            @TempData["Error"]
+        </div>
+    }
+
+    <!-- Header -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-5">
+        <div class="flex items-start justify-between">
+            <div>
+                <span class="text-xs font-medium px-2 py-1 rounded-full
+                    @(Model.Status == "Published" ? "bg-green-100 text-green-600" :
+                                            Model.Status == "Archived" ? "bg-gray-100 text-gray-500" :
+                                            "bg-yellow-100 text-yellow-600") mb-2 inline-block">
+                    @Model.Status
+                </span>
+                <h2 class="text-2xl font-bold text-gray-800">@Model.Title</h2>
+                <p class="text-gray-500 mt-1">@Model.Description</p>
+                @if (Model.Instructor != null)
+                {
+                    <p class="text-sm text-gray-400 mt-2">Instructor: @Model.Instructor.FullName</p>
+                }
+                <a asp-controller="Assignment" asp-action="Index" asp-route-courseId="@Model.Id"
+                   class="inline-block mt-4 text-sm text-orange-500 hover:underline">
+                    📚 View Assignments
+                </a>
+                <a asp-controller="Quiz" asp-action="Index" asp-route-courseId="@Model.Id"
+                   class="inline-block mt-2 text-sm text-orange-500 hover:underline">
+                    ❓ View Quizzes
+                </a>
+                <a asp-controller="Announcement" asp-action="Index" asp-route-courseId="@Model.Id"
+                   class="inline-block mt-2 text-sm text-orange-500 hover:underline">
+                    📢 Announcements
+                </a>
+                @if (isInstructor)
+                {
+                    <a asp-controller="Grade" asp-action="Book" asp-route-courseId="@Model.Id"
+                       class="inline-block mt-2 text-sm text-orange-500 hover:underline">
+                        📖 Grade Book
+                    </a>
+                }
+            </div>
+
+            <div class="flex flex-col gap-2">
+                @if (isInstructor)
+                {
+                    <a asp-action="Edit" asp-controller="Course" asp-route-id="@Model.Id"
+                           class="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-2 rounded-lg transition text-center">
+                        Edit
+                    </a>
+                    <a asp-controller="Content" asp-action="Manage" asp-route-courseId="@Model.Id"
+                       class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm px-4 py-2 rounded-lg transition text-center">
+                        Manage Content
+                    </a>
+                }
+                @if (isStudent)
+                {
+                    if (enrollment == null)
+                    {
+                        <form asp-controller="Enrollment" asp-action="Enroll" method="post">
+                            <input type="hidden" name="courseId" value="@Model.Id" />
+                            <button type="submit"
+                                    class="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-2 rounded-lg transition">
+                                Enroll
+                            </button>
+                        </form>
+                    }
+                    else if (enrollment.Status == "Pending")
+                    {
+                        <span class="bg-yellow-100 text-yellow-600 text-sm px-4 py-2 rounded-lg">
+                            Pending Approval
+                        </span>
+                        <form asp-controller="Enrollment" asp-action="Drop" method="post">
+                            <input type="hidden" name="courseId" value="@Model.Id" />
+                            <button type="submit"
+                                    class="bg-red-50 hover:bg-red-100 text-red-500 text-sm px-4 py-2 rounded-lg transition w-full">
+                                Cancel Request
+                            </button>
+                        </form>
+                    }
+                    else if (enrollment.Status == "Approved")
+                    {
+                        <span class="bg-green-100 text-green-600 text-sm px-4 py-2 rounded-lg">
+                            ✓ Enrolled
+                        </span>
+                        <form asp-controller="Enrollment" asp-action="Drop" method="post">
+                            <input type="hidden" name="courseId" value="@Model.Id" />
+                            <button type="submit"
+                                    class="bg-red-50 hover:bg-red-100 text-red-500 text-sm px-4 py-2 rounded-lg transition w-full">
+                                Drop Course
+                            </button>
+                        </form>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Modules -->
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Course Content</h3>
+
+        @if (!Model.Modules.Any())
+        {
+            <p class="text-gray-400 text-sm">No content yet.</p>
+        }
+        else
+        {
+            @foreach (var module in Model.Modules.OrderBy(m => m.Order))
+            {
+                <div class="mb-4 border border-gray-100 rounded-xl p-4">
+                    <h4 class="font-semibold text-gray-700 mb-2">@module.Title</h4>
+                    <ul class="space-y-2">
+                        @foreach (var item in module.ContentItems.OrderBy(c => c.Order))
+                        {
+                            <li class="flex items-center gap-2 text-sm text-gray-600">
+                                <span>@(item.Type == "Video" ? "🎥" : item.Type == "PDF" ? "📄" : "📝")</span>
+                                @item.Title
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        }
+    </div>
+</div>

@@ -1,0 +1,75 @@
+@model LMS.ViewModels.AnnouncementFeedVM
+@{
+    Layout = "_EduFlowDashboardLayout";
+    ViewData["Title"] = "Announcements";
+    ViewData["PageTitle"] = "Announcements";
+    ViewData["PageSubtitle"] = "Course and global updates";
+}
+@section DashboardStyles {
+<style>
+  .ann-card { background:linear-gradient(180deg,#fff 0%,#f8faff 100%); border-color:#e0e7ff; }
+  .ann-card:hover { border-color:#a5b4fc; }
+</style>
+}
+<div class="max-w-6xl mx-auto grid lg:grid-cols-3 gap-5">
+  <div class="lg:col-span-2 space-y-4">
+    <div class="ann-card rounded-2xl border shadow-sm p-5">
+      <h2 class="text-lg font-bold text-slate-800">Recent Announcements</h2>
+      <p class="text-sm text-slate-500 mt-1">Showing announcements relevant to your role and courses.</p>
+    </div>
+    @if (!Model.Announcements.Any())
+    {
+      <div class="ann-card rounded-2xl border shadow-sm p-8 text-center">
+        <p class="font-semibold text-slate-700">No announcements yet</p>
+        <p class="text-sm text-slate-400 mt-1">Announcements will appear here once posted.</p>
+      </div>
+    }
+    @foreach (var announcement in Model.Announcements)
+    {
+      <div class="ann-card rounded-2xl border shadow-sm p-5 transition">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h3 class="font-semibold text-slate-800">@announcement.Title</h3>
+            <p class="text-xs text-slate-500 mt-1">
+              @(announcement.IsGlobal ? "Global" : announcement.Course?.Title ?? "General")
+              | @(announcement.Instructor?.FullName ?? "System")
+              | @announcement.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+            </p>
+          </div>
+          @if (Model.CanPost && (User.IsInRole("Admin") || announcement.InstructorId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value))
+          {
+            <form asp-action="Delete" method="post" onsubmit="return confirm('Delete this announcement?')">
+              <input type="hidden" name="id" value="@announcement.Id" />
+              <button class="text-xs font-medium text-red-500">Delete</button>
+            </form>
+          }
+        </div>
+        <p class="text-sm text-slate-700 mt-3 leading-relaxed whitespace-pre-line">@announcement.Body</p>
+      </div>
+    }
+  </div>
+  <div class="space-y-4">
+    @if (Model.CanPost)
+    {
+      <div class="ann-card rounded-2xl border shadow-sm p-5">
+        <h3 class="font-semibold text-slate-800 mb-3">Post Announcement</h3>
+        <form asp-action="Post" method="post" class="space-y-3">
+          <input type="text" name="title" placeholder="Title" required class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm" />
+          <select name="courseId" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm">
+            <option value="">Global announcement (all users)</option>
+            @foreach (var course in Model.PostingCourses)
+            {
+              <option value="@course.Id">@course.Title</option>
+            }
+          </select>
+          <textarea name="body" rows="4" placeholder="Write your announcement..." required class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"></textarea>
+          <button type="submit" class="w-full text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition py-2.5 rounded-xl">Post</button>
+        </form>
+      </div>
+    }
+    <div class="ann-card rounded-2xl border shadow-sm p-5">
+      <h3 class="font-semibold text-slate-800 mb-3">Summary</h3>
+      <p class="flex justify-between text-sm"><span class="text-slate-500">Visible announcements</span><span class="font-semibold text-slate-800">@Model.Announcements.Count</span></p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,76 @@
+﻿@model LMS.Models.ContentItem
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-2xl shadow-sm p-8">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs bg-orange-100 text-orange-500 px-2 py-1 rounded-full">@Model.Type</span>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">@Model.Title</h2>
+
+        @if (Model.Type == "Lecture")
+        {
+            <div class="prose text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                @Model.Content
+            </div>
+        }
+        else if (Model.Type == "PDF")
+        {
+            <iframe src="@Model.Content" class="w-full h-screen rounded-xl border border-gray-200"></iframe>
+        }
+        else if (Model.Type == "Video")
+        {
+            <div class="aspect-video">
+                <iframe src="@Model.Content" class="w-full h-full rounded-xl"
+                        allowfullscreen></iframe>
+            </div>
+        }
+
+        @if (User.IsInRole("Student"))
+        {
+            <div class="mt-5" id="progressSection">
+                <button onclick="toggleProgress(@Model.Id, @Model.Module!.CourseId)"
+                        id="progressBtn"
+                        class="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border border-gray-200 hover:bg-orange-50 hover:border-orange-300 transition">
+                    <span id="progressIcon">⬜</span>
+                    <span id="progressText">Mark as Complete</span>
+                </button>
+                <p class="text-xs text-gray-400 mt-2" id="progressPercent"></p>
+            </div>
+
+            <script>
+                // Check current state on load
+                (async function () {
+                    const res = await fetch(`/Progress/Toggle`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `contentItemId=@Model.Id&courseId=@Model.Module!.CourseId&__RequestVerificationToken=${document.querySelector('input[name=__RequestVerificationToken]')?.value ?? ''}`
+                    });
+                })();
+
+                async function toggleProgress(contentItemId, courseId) {
+                    const token = document.querySelector('input[name=__RequestVerificationToken]')?.value ?? '';
+                    const res = await fetch('/Progress/Toggle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `contentItemId=${contentItemId}&courseId=${courseId}&__RequestVerificationToken=${token}`
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        document.getElementById('progressIcon').textContent = data.isCompleted ? '✅' : '⬜';
+                        document.getElementById('progressText').textContent = data.isCompleted ? 'Completed' : 'Mark as Complete';
+                        document.getElementById('progressPercent').textContent =
+                            `Course progress: ${data.percent}% (${data.completedItems}/${data.totalItems} items)`;
+                    }
+                }
+            </script>
+        }
+
+        <div class="mt-6">
+            <a asp-controller="Course" asp-action="Details" asp-route-id="@Model.Module!.CourseId"
+               class="text-sm text-orange-500 hover:underline">← Back to Course</a>
+        </div>
+    </div>
+</div>

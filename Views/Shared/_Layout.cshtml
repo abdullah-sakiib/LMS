@@ -1,0 +1,8 @@
+@{
+    Layout = "_EduFlowDashboardLayout";
+}
+@RenderBody()
+
+@section DashboardScripts {
+    @await RenderSectionAsync("Scripts", required: false)
+}

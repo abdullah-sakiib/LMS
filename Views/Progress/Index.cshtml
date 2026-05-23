@@ -1,0 +1,39 @@
+﻿@{
+    ViewData["Title"] = "My Progress";
+    var progressData = ViewBag.ProgressData as dynamic;
+}
+
+<div class="max-w-4xl mx-auto space-y-5">
+    <h2 class="text-xl font-bold text-gray-800">My Progress</h2>
+
+    @foreach (var item in ViewBag.ProgressData)
+    {
+        <div class="bg-white rounded-2xl shadow-sm p-5">
+            <div class="flex items-center justify-between mb-2">
+                <div>
+                    <h3 class="font-semibold text-gray-800">@item.Course.Title</h3>
+                    <p class="text-xs text-gray-400">@item.Completed / @item.Total items completed</p>
+                </div>
+                <span class="text-lg font-bold @(item.Percent >= 100 ? "text-green-500" : "text-orange-500")">
+                    @item.Percent%
+                </span>
+            </div>
+            <!-- Progress bar -->
+            <div class="w-full bg-gray-100 rounded-full h-2.5">
+                <div class="bg-orange-400 h-2.5 rounded-full transition-all"
+                     style="width: @(item.Percent)%"></div>
+            </div>
+            @if (item.Percent >= 100)
+            {
+                <p class="text-xs text-green-500 mt-2">🎉 Course completed!</p>
+            }
+        </div>
+    }
+
+    @if (((IEnumerable<dynamic>)ViewBag.ProgressData).Count() == 0)
+    {
+        <div class="bg-white rounded-2xl shadow-sm p-8 text-center text-gray-400">
+            You are not enrolled in any courses yet.
+        </div>
+    }
+</div>

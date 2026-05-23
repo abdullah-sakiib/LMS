@@ -1,0 +1,137 @@
+@model LMS.ViewModels.CourseIndexVM
+@{
+    ViewData["Title"] = Model.IsManagementView ? "My Courses" : "Course Catalog";
+    ViewData["PageTitle"] = ViewData["Title"];
+    ViewData["PageSubtitle"] = Model.IsManagementView ? "Manage course content and learners" : "Browse and enroll in available courses";
+}
+<style>
+  .reveal { animation: catalog-in .45s ease both; }
+  @@keyframes catalog-in { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+  .course-card { transition:transform .25s ease,box-shadow .25s ease; }
+  .course-card:hover { transform:translateY(-4px); box-shadow:0 20px 40px rgba(79,70,229,.12); }
+  .input-field:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
+  .filter-btn.active,.view-btn.active { background:#4f46e5; color:#fff; border-color:#4f46e5; }
+  .tag-btn.active { background:#0f766e; color:#fff; border-color:#0f766e; }
+  .list-row:hover { background:linear-gradient(90deg,#eef2ff,#ecfeff); border-color:#a5b4fc; }
+</style>
+@if (Model.IsManagementView)
+{
+  <div class="max-w-6xl mx-auto space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div><h2 class="text-xl font-bold text-slate-800">My Courses</h2><p class="text-sm text-slate-500">Open a course to manage content, learners, and assessments.</p></div>
+      <a asp-action="Create" class="inline-flex items-center gap-2 bg-primary-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl"><i class="ri-add-circle-line"></i> New Course</a>
+    </div>
+    @foreach (var card in Model.Courses)
+    {
+      var course = card.Course;
+      <section class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-5 flex flex-wrap justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2"><a asp-controller="Content" asp-action="Manage" asp-route-courseId="@course.Id" class="font-semibold text-slate-800 hover:text-primary-600">@course.Title</a><span class="text-xs px-2 py-0.5 rounded-full @(course.Status == "Published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")">@course.Status</span>@if (course.IsEnded) { <span class="text-xs px-2 py-0.5 rounded-full bg-rose-50 text-rose-700">Ended</span> }</div>
+            <p class="text-xs text-slate-500 mt-1 max-w-xl">@(!string.IsNullOrWhiteSpace(course.ShortDescription) ? course.ShortDescription : course.Description)</p>
+          </div>
+          <div class="flex flex-wrap gap-2 text-xs"><span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700">Students: @card.ApprovedEnrollmentCount</span><span class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">Pending: @card.PendingEnrollmentCount</span><span class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">Resources: @card.LectureCount</span><span class="px-2.5 py-1 rounded-full bg-sky-50 text-sky-700">Quizzes: @card.QuizCount</span></div>
+        </div>
+        <div class="border-t border-slate-100 px-5 py-3 flex flex-wrap gap-2">
+          <a asp-controller="Content" asp-action="Manage" asp-route-courseId="@course.Id" class="text-xs font-semibold text-primary-600 border border-primary-200 rounded-lg px-3 py-2">Manage Content</a>
+          <a asp-action="Details" asp-route-id="@course.Id" class="text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg px-3 py-2">View Page</a>
+          <a asp-controller="Assignment" asp-action="Index" asp-route-courseId="@course.Id" class="text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg px-3 py-2">Assignments</a>
+          <a asp-controller="Quiz" asp-action="Index" asp-route-courseId="@course.Id" class="text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg px-3 py-2">Quizzes</a>
+          <a asp-action="Edit" asp-route-id="@course.Id" class="text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg px-3 py-2 ml-auto">Edit Settings</a>
+        </div>
+      </section>
+    }
+    @if (!Model.Courses.Any()) { <div class="bg-white rounded-2xl p-10 text-center border border-slate-100 text-slate-500">No courses yet. Create your first course to begin teaching.</div> }
+  </div>
+}
+else
+{
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6 reveal">
+    <div class="flex flex-col md:flex-row gap-3">
+      <div class="relative flex-1"><i class="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i><input id="search-input" type="text" oninput="filterCourses()" value="@Model.SearchQuery" placeholder="Search by course name, instructor..." class="input-field w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"/></div>
+      <select id="category-filter" onchange="filterCourses()" class="input-field px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="">All categories</option>@foreach (var category in Model.Categories) { <option value="@category">@category</option> }</select>
+      <select id="level-filter" onchange="filterCourses()" class="input-field px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="">All levels</option><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select>
+      <select id="tag-filter" onchange="filterCourses()" class="input-field px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="">All tags</option>@foreach (var tag in Model.Tags) { <option value="@tag.ToLowerInvariant()">#@tag</option> }</select>
+      <div class="flex items-center gap-1 bg-slate-100 rounded-xl p-1"><button type="button" id="view-grid" class="view-btn active w-8 h-8 rounded-lg" onclick="setView('grid')"><i class="ri-grid-line"></i></button><button type="button" id="view-list" class="view-btn w-8 h-8 rounded-lg text-slate-500" onclick="setView('list')"><i class="ri-list-unordered"></i></button></div>
+    </div>
+    <div class="flex flex-wrap gap-2 mt-3">
+      <button type="button" class="filter-btn active text-xs font-semibold border border-slate-200 px-3 py-1.5 rounded-full" data-category="" onclick="selectCategory(this)">All</button>
+      @foreach (var category in Model.Categories) { <button type="button" class="filter-btn text-xs font-semibold border border-slate-200 text-slate-600 px-3 py-1.5 rounded-full" data-category="@category" onclick="selectCategory(this)"><i class="ri-price-tag-3-line mr-1"></i>@category</button> }
+    </div>
+    @if (Model.Tags.Any())
+    {
+      <div class="flex flex-wrap gap-2 mt-3"><button type="button" class="tag-btn active text-xs font-semibold border border-teal-200 text-teal-700 px-3 py-1.5 rounded-full" data-tag="" onclick="selectTag(this)">All tags</button>@foreach (var tag in Model.Tags) { <button type="button" class="tag-btn text-xs font-semibold border border-teal-200 text-teal-700 px-3 py-1.5 rounded-full" data-tag="@tag.ToLowerInvariant()" onclick="selectTag(this)">#@tag</button> }</div>
+    }
+  </div>
+  <div class="flex items-center justify-between mb-4 reveal"><p class="text-sm text-slate-500">Showing <span id="result-count" class="font-semibold text-slate-800">@Model.Courses.Count</span> courses</p><select onchange="sortCourses(this.value)" class="input-field text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white"><option value="name">Sort: Name A-Z</option><option value="students">Sort: Most students</option><option value="rating">Sort: Highest rated</option></select></div>
+  <div id="grid-view" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+    @for (var index = 0; index < Model.Courses.Count; index++)
+    {
+      var card = Model.Courses[index]; var course = card.Course; var enrolled = Model.EnrolledCourseIds.Contains(course.Id);
+      var banner = new[] { "from-indigo-500 to-indigo-700", "from-violet-500 to-violet-700", "from-emerald-500 to-emerald-700", "from-sky-500 to-sky-700", "from-rose-500 to-rose-700", "from-amber-500 to-amber-700" }[index % 6];
+      <article class="course-result course-card bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden reveal" data-category="@course.Category" data-level="@course.Level" data-name="@course.Title" data-instructor="@course.Instructor?.FullName" data-tags="@course.Tags.ToLowerInvariant()" data-students="@card.ApprovedEnrollmentCount" data-rating="@card.CourseRating">
+        <a asp-action="Details" asp-route-id="@course.Id" class="block h-32 bg-gradient-to-br @banner relative overflow-hidden p-4 flex flex-col justify-between">
+          <div class="flex items-center justify-between"><span class="text-xs font-semibold bg-white/20 text-white px-2.5 py-1 rounded-full">@(!string.IsNullOrWhiteSpace(course.Category) ? course.Category : "General")</span><span class="text-xs font-semibold @(enrolled ? "bg-emerald-400 text-white" : card.IsAtCapacity ? "bg-slate-700 text-white" : course.EnrollmentType == "Approval" ? "bg-amber-300 text-amber-900" : "bg-white/20 text-white") px-2.5 py-1 rounded-full">@(enrolled ? "Enrolled" : card.IsAtCapacity ? "Full" : course.EnrollmentType == "Approval" ? "Approval" : "Open")</span></div>
+          <i class="ri-book-open-line text-white/20 text-6xl absolute -right-2 -bottom-2"></i><h3 class="font-bold text-white text-base leading-tight">@course.Title</h3>
+        </a>
+        <div class="p-4">
+          <div class="flex items-center gap-2 mb-3"><div class="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] flex items-center justify-center">@((course.Instructor?.FullName ?? "T").Substring(0, 1))</div><div><p class="text-xs text-slate-500">@(course.Instructor?.FullName ?? "TBA")</p><p class="text-[11px] text-amber-600"><i class="ri-star-fill"></i> @card.InstructorRating.ToString("0.0") <span class="text-slate-400">(@card.InstructorReviewCount)</span></p></div></div>
+          <div class="flex items-center gap-3 text-xs text-slate-500 mb-3"><span><i class="ri-time-line"></i> @course.DurationWeeks weeks</span><span><i class="ri-group-line"></i> @card.ApprovedEnrollmentCount students</span><span><i class="ri-book-2-line"></i> @card.LectureCount lectures</span></div>
+          @if (course.TagList.Any()) { <div class="mb-3 flex flex-wrap gap-1.5">@foreach (var tag in course.TagList.Take(3)) { <span class="text-[11px] px-2 py-1 rounded-full bg-slate-100 text-slate-600">#@tag</span> }</div> }
+          <div class="flex items-center justify-between"><span class="text-xs text-slate-500"><i class="ri-star-fill text-amber-400"></i> <strong class="text-slate-700">@card.CourseRating.ToString("0.0")</strong> (@card.CourseReviewCount) &middot; @course.Level</span><a asp-action="Details" asp-route-id="@course.Id" class="text-xs font-semibold text-primary-600">@(enrolled ? "Continue" : "View details") <i class="ri-arrow-right-line"></i></a></div>
+        </div>
+      </article>
+    }
+  </div>
+  <div id="list-view" class="hidden space-y-3">
+    @foreach (var card in Model.Courses)
+    {
+      var course = card.Course; var enrolled = Model.EnrolledCourseIds.Contains(course.Id);
+      <a asp-action="Details" asp-route-id="@course.Id" class="course-result list-row bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-4 reveal" data-category="@course.Category" data-level="@course.Level" data-name="@course.Title" data-instructor="@course.Instructor?.FullName" data-tags="@course.Tags.ToLowerInvariant()" data-students="@card.ApprovedEnrollmentCount" data-rating="@card.CourseRating"><span class="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center"><i class="ri-book-open-line text-indigo-600 text-xl"></i></span><span class="flex-1 min-w-0"><strong class="block text-sm text-slate-800">@course.Title</strong><span class="text-xs text-slate-400">@(course.Instructor?.FullName ?? "TBA") &middot; @card.ApprovedEnrollmentCount students</span></span><span class="hidden sm:flex gap-4 text-xs text-slate-500">@course.DurationWeeks weeks <span><i class="ri-star-fill text-amber-400"></i> @card.CourseRating.ToString("0.0")</span><span class="@(enrolled ? "text-emerald-600" : "text-slate-500") font-semibold">@(enrolled ? "Enrolled" : "Open")</span></span><i class="ri-arrow-right-s-line text-slate-300"></i></a>
+    }
+  </div>
+  <div id="empty-state" class="hidden text-center py-20"><i class="ri-search-line text-slate-400 text-3xl"></i><p class="text-slate-600 font-semibold mt-3">No courses found</p><p class="text-slate-400 text-sm">Try adjusting your search or filters.</p></div>
+}
+@section Scripts {
+<script>
+  let activeView = 'grid';
+  function setView(view) {
+    activeView = view;
+    document.getElementById('grid-view').classList.toggle('hidden', view !== 'grid');
+    document.getElementById('list-view').classList.toggle('hidden', view !== 'list');
+    document.getElementById('view-grid').classList.toggle('active', view === 'grid');
+    document.getElementById('view-list').classList.toggle('active', view === 'list');
+  }
+  function selectCategory(button) {
+    document.querySelectorAll('.filter-btn').forEach(item => item.classList.toggle('active', item === button));
+    document.getElementById('category-filter').value = button.dataset.category;
+    filterCourses();
+  }
+  function selectTag(button) {
+    document.querySelectorAll('.tag-btn').forEach(item => item.classList.toggle('active', item === button));
+    document.getElementById('tag-filter').value = button.dataset.tag;
+    filterCourses();
+  }
+  function filterCourses() {
+    const search = document.getElementById('search-input').value.toLowerCase();
+    const category = document.getElementById('category-filter').value;
+    const level = document.getElementById('level-filter').value;
+    const tag = document.getElementById('tag-filter').value;
+    let count = 0;
+    document.querySelectorAll('.course-result').forEach((item, index) => {
+      const matches = (!search || (item.dataset.name + item.dataset.instructor + item.dataset.tags).toLowerCase().includes(search)) && (!category || item.dataset.category === category) && (!level || item.dataset.level === level) && (!tag || item.dataset.tags.split(',').map(value => value.trim()).includes(tag));
+      item.style.display = matches ? '' : 'none';
+      if (matches && index < document.querySelectorAll('#grid-view .course-result').length) count++;
+    });
+    document.getElementById('result-count').textContent = count;
+    document.getElementById('empty-state').classList.toggle('hidden', count !== 0);
+  }
+  function sortCourses(key) {
+    ['grid-view', 'list-view'].forEach(id => {
+      const shell = document.getElementById(id);
+      [...shell.querySelectorAll('.course-result')].sort((a, b) => key === 'students' ? +b.dataset.students - +a.dataset.students : key === 'rating' ? +b.dataset.rating - +a.dataset.rating : a.dataset.name.localeCompare(b.dataset.name)).forEach(item => shell.appendChild(item));
+    });
+  }
+  if (document.getElementById('search-input')) filterCourses();
+</script>
+}

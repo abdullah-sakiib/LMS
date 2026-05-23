@@ -1,0 +1,22 @@
+@model LMS.ViewModels.CourseDiscussionVM
+@{
+    ViewData["Title"] = $"Discussion - {Model.Course.Title}";
+    ViewData["PageTitle"] = "Course Discussion";
+    ViewData["PageSubtitle"] = Model.Course.Title;
+}
+<div class="max-w-5xl mx-auto space-y-5">
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+    <div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-lg font-semibold text-slate-800">Discussion Zone</h2><p class="text-sm text-slate-500">Ask doubts, share clarifications, and collaborate with this course cohort.</p></div><a asp-action="Details" asp-route-id="@Model.Course.Id" class="text-sm text-indigo-600 font-medium">Back to course</a></div>
+  </div>
+  @if (Model.CanPost)
+  {
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <form asp-action="Discussion" asp-route-id="@Model.Course.Id" method="post" class="space-y-3"><label class="block text-xs text-slate-500">Post a message</label><textarea name="message" rows="4" maxlength="2000" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="Write your question or answer..."></textarea><button class="inline-flex px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold">Post message</button></form>
+    </div>
+  }
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+    <h3 class="font-semibold text-slate-800 mb-3">Recent posts</h3>
+    @foreach (var post in Model.Posts) { <article class="border border-slate-100 rounded-xl p-4 mb-3"><div class="flex items-center justify-between gap-3"><p class="text-sm font-semibold text-slate-800">@post.Author?.FullName</p><p class="text-xs text-slate-500">@post.CreatedAt.ToString("MMM dd, yyyy HH:mm")</p></div><p class="text-sm text-slate-700 mt-2 whitespace-pre-wrap">@post.Message</p></article> }
+    @if (!Model.Posts.Any()) { <p class="text-sm text-slate-500">No discussion posts yet. Be the first to start the conversation.</p> }
+  </div>
+</div>

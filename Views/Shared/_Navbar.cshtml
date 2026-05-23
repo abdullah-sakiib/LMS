@@ -1,0 +1,32 @@
+﻿
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<LMS.Models.ApplicationUser> UserManager
+@{
+    var user = await UserManager.GetUserAsync(User);
+}
+
+<header class="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+
+    <div>
+        <h1 class="text-lg font-semibold text-gray-800">@ViewData["Title"]</h1>
+    </div>
+
+    <div class="flex items-center gap-4">
+        <!-- Search -->
+        <div class="relative">
+            <input type="text" placeholder="Search..."
+                   class="bg-gray-100 rounded-lg px-4 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-orange-400" />
+        </div>
+
+        <!-- Notification -->
+        <button class="relative text-gray-500 hover:text-orange-500">
+            🔔
+        </button>
+
+        <!-- Avatar -->
+        <div class="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-bold">
+            @(user?.FullName?.Substring(0, 1).ToUpper() ?? "U")
+        </div>
+    </div>
+
+</header>

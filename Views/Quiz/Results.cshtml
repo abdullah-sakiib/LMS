@@ -1,0 +1,35 @@
+@model LMS.Models.Quiz
+@{
+    bool isInstructor = ViewBag.IsInstructor;
+    var myAttempt = ViewBag.MyAttempt as LMS.Models.QuizAttempt;
+    ViewData["Title"] = isInstructor ? "Quiz Attempts" : "Quiz Results";
+    ViewData["PageTitle"] = isInstructor ? "Quiz Attempts" : "Quiz Results";
+    ViewData["PageSubtitle"] = Model.Title;
+}
+<div class="max-w-5xl mx-auto space-y-5">
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between">
+    <div><h2 class="text-lg font-bold text-slate-800">@Model.Title</h2><p class="text-sm text-slate-500">@Model.Attempts.Count total attempts</p></div>
+    <div class="flex gap-2"><a asp-action="Index" asp-route-courseId="@Model.CourseId" class="text-sm font-medium text-primary-600 border border-primary-200 px-4 py-2 rounded-xl">Back to Quizzes</a>@if (isInstructor) { <a asp-action="Edit" asp-route-id="@Model.Id" class="text-sm font-medium text-slate-600 border border-slate-200 px-4 py-2 rounded-xl">Edit Quiz</a> }</div>
+  </div>
+  @if (!isInstructor && myAttempt != null)
+  {
+    <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-8 text-center"><p class="text-4xl font-bold text-primary-600">@myAttempt.Score.ToString("0.##")/@Model.TotalMarks</p><p class="text-slate-500 text-sm mt-1">Your Score</p></div>
+  }
+  @if (isInstructor)
+  {
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100"><h3 class="font-semibold text-slate-800">Student Attempts</h3></div>
+      @if (Model.Attempts.Any())
+      {
+        <table class="w-full text-sm"><thead><tr class="text-xs text-slate-400 uppercase bg-slate-50"><th class="text-left px-5 py-3">Student</th><th class="text-left px-5 py-3">Score</th><th class="text-left px-5 py-3">Started</th><th class="text-left px-5 py-3">Submitted</th><th class="text-left px-5 py-3">Status</th></tr></thead><tbody class="divide-y divide-slate-50">
+        @foreach (var attempt in Model.Attempts.OrderByDescending(a => a.SubmittedAt))
+        {
+          var percent = attempt.Score / Math.Max(1, Model.TotalMarks) * 100;
+          <tr><td class="px-5 py-3 font-medium text-slate-700">@attempt.Student?.FullName</td><td class="px-5 py-3 font-semibold @(percent >= 50 ? "text-emerald-600" : "text-red-500")">@attempt.Score.ToString("0.##")/@Model.TotalMarks</td><td class="px-5 py-3 text-slate-500">@attempt.StartedAt.ToString("MMM d, yyyy HH:mm")</td><td class="px-5 py-3 text-slate-500">@attempt.SubmittedAt?.ToString("MMM d, yyyy HH:mm")</td><td class="px-5 py-3"><span class="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-full">Submitted</span></td></tr>
+        }
+        </tbody></table>
+      }
+      else { <div class="p-8 text-center text-sm text-slate-500">Students have not started this quiz.</div> }
+    </div>
+  }
+</div>

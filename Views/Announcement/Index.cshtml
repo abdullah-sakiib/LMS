@@ -1,0 +1,56 @@
+﻿@model List<LMS.Models.Announcement>
+@{
+    ViewData["Title"] = "Announcements";
+    var course = ViewBag.Course as LMS.Models.Course;
+    bool isInstructor = ViewBag.IsInstructor;
+}
+
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h2 class="text-xl font-bold text-gray-800">Announcements</h2>
+            <p class="text-sm text-gray-400">@course?.Title</p>
+        </div>
+        @if (isInstructor)
+        {
+            <a asp-action="Create" asp-route-courseId="@course?.Id"
+                   class="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-2 rounded-lg transition">
+                + New Announcement
+            </a>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="bg-white rounded-2xl shadow-sm p-8 text-center text-gray-400">
+            No announcements yet.
+        </div>
+    }
+    else
+    {
+        <div class="space-y-4">
+            @foreach (var a in Model)
+            {
+                <div class="bg-white rounded-2xl shadow-sm p-5">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h3 class="font-semibold text-gray-800">@a.Title</h3>
+                            <p class="text-xs text-gray-400 mt-0.5">
+                                @a.Instructor?.FullName · @a.CreatedAt.ToString("MMM dd, yyyy")
+                            </p>
+                        </div>
+                        @if (isInstructor)
+                        {
+                            <form asp-action="Delete" method="post"
+                                  onsubmit="return confirm('Delete this announcement?')">
+                                <input type="hidden" name="id" value="@a.Id" />
+                                <button type="submit" class="text-xs text-red-400 hover:underline">Delete</button>
+                            </form>
+                        }
+                    </div>
+                    <p class="text-sm text-gray-600 mt-3 whitespace-pre-line">@a.Body</p>
+                </div>
+            }
+        </div>
+    }
+</div>

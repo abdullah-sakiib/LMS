@@ -1,0 +1,61 @@
+﻿using LMS.Data;
+using LMS.Models;
+using LMS.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace LMS.Controllers;
+
+[Authorize]
+public class DashboardController : Controller
+{
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ApplicationDbContext _db;
+
+    public DashboardController(UserManager<ApplicationUser> userManager, ApplicationDbContext db)
+    {
+        _userManager = userManager;
+        _db = db;
+    }
+
+    public async Task<IActionResult> Index()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        var roles = await _userManager.GetRolesAsync(user!);
+        var role = roles.FirstOrDefault() ?? "Student";
+
+        var vm = new DashboardVM
+        {
+            FullName = user!.FullName,
+            Role = role
+        };
+
+        if (role == "Student")
+        {
+            vm.EnrolledCourses = await _db.Enrollments
+                .CountAsync(e => e.StudentId == user.Id && e.Status == "Approved");
+            vm.PendingAssignments = 0; // will populate later
+            vm.CompletedQuizzes = 0;
+        }
+        else if (role == "Instructor")
+        {
+            vm.TotalCourses = await _db.Courses
+                .CountAsync(c => c.InstructorId == user.Id);
+            vm.TotalStudents = await _db.Enrollments
+                .CountAsync(e => e.Status == "Approved" &&
+                    _db.Courses.Any(c => c.Id == e.CourseId && c.InstructorId == user.Id));
+            vm.PendingSubmissions = 0;
+        }
+        else if (role == "Admin")
+        {
+            vm.TotalUsers = await _db.Users.CountAsync();
+            vm.TotalCoursesAll = await _db.Courses.CountAsync();
+            vm.TotalEnrollments = await _db.Enrollments.CountAsync();
+        }
+
+        ViewData["Title"] = "Dashboard";
+        return View(vm);
+    }
+}

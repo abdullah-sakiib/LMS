@@ -1,0 +1,24 @@
+@{
+    Layout = "_EduFlowDashboardLayout";
+    ViewData["Title"] = "Settings";
+    ViewData["PageTitle"] = "Settings";
+    ViewData["PageSubtitle"] = "Account and platform preferences";
+}
+<div class="max-w-4xl mx-auto space-y-5">
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+    <h2 class="text-lg font-bold text-slate-800">Settings</h2>
+    <p class="text-sm text-slate-500 mt-1">This page centralizes account preferences and security shortcuts.</p>
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <h3 class="font-semibold text-slate-800">Profile</h3>
+      <p class="text-sm text-slate-500 mt-2">Update personal details and academic info.</p>
+      <a asp-controller="Profile" asp-action="Index" class="inline-flex mt-4 text-sm font-semibold text-indigo-600">Open profile</a>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <h3 class="font-semibold text-slate-800">Security</h3>
+      <p class="text-sm text-slate-500 mt-2">Change password from your profile security tab.</p>
+      <a asp-controller="Profile" asp-action="Index" asp-route-tab="security" class="inline-flex mt-4 text-sm font-semibold text-indigo-600">Manage security</a>
+    </div>
+  </div>
+</div>

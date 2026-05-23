@@ -1,0 +1,40 @@
+@model LMS.ViewModels.StudentGradesVM
+@{
+    ViewData["Title"] = "My Grades";
+    ViewData["PageTitle"] = "My Grades";
+    ViewData["PageSubtitle"] = "Real-time assignment and quiz performance";
+}
+<div class="max-w-6xl mx-auto space-y-5">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4"><p class="text-xs text-slate-500">Assignment Avg</p><p class="text-2xl font-bold text-slate-800 mt-1">@Model.AssignmentAverage.ToString("0.##")%</p></div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4"><p class="text-xs text-slate-500">Quiz Avg</p><p class="text-2xl font-bold text-slate-800 mt-1">@Model.QuizAverage.ToString("0.##")%</p></div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4"><p class="text-xs text-slate-500">Graded Assignments</p><p class="text-2xl font-bold text-slate-800 mt-1">@Model.GradedAssignments</p></div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4"><p class="text-xs text-slate-500">Quiz Attempts</p><p class="text-2xl font-bold text-slate-800 mt-1">@Model.QuizAttempts.Count</p></div>
+  </div>
+  <div class="grid lg:grid-cols-2 gap-5">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100"><h3 class="font-semibold text-slate-800">Assignment Grades</h3></div>
+      <div class="overflow-x-auto"><table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 bg-slate-50"><tr><th class="text-left px-4 py-3">Assignment</th><th class="text-left px-4 py-3">Course</th><th class="text-left px-4 py-3">Status</th><th class="text-left px-4 py-3">Score</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          @foreach (var submission in Model.Submissions)
+          {
+            var badge = submission.Status == "Graded" ? "bg-emerald-50 text-emerald-700" : submission.Status == "Late" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600";
+            <tr><td class="px-4 py-3 text-slate-700">@submission.Assignment?.Title</td><td class="px-4 py-3 text-slate-500">@submission.Assignment?.Course?.Title</td><td class="px-4 py-3"><span class="text-xs font-semibold px-2 py-0.5 rounded-full @badge">@submission.Status</span></td><td class="px-4 py-3 text-slate-700">@(submission.Grade.HasValue ? $"{submission.Grade:0.##}/{submission.Assignment?.MaxScore}" : "-")</td></tr>
+          }
+          @if (!Model.Submissions.Any()) { <tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">No assignment submissions yet.</td></tr> }
+        </tbody>
+      </table></div>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100"><h3 class="font-semibold text-slate-800">Quiz Grades</h3></div>
+      <div class="overflow-x-auto"><table class="w-full text-sm">
+        <thead class="text-xs text-slate-500 bg-slate-50"><tr><th class="text-left px-4 py-3">Quiz</th><th class="text-left px-4 py-3">Course</th><th class="text-left px-4 py-3">Submitted</th><th class="text-left px-4 py-3">Score</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          @foreach (var attempt in Model.QuizAttempts) { <tr><td class="px-4 py-3 text-slate-700">@attempt.Quiz?.Title</td><td class="px-4 py-3 text-slate-500">@attempt.Quiz?.Course?.Title</td><td class="px-4 py-3 text-slate-500">@attempt.SubmittedAt?.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</td><td class="px-4 py-3 text-slate-700">@attempt.Score.ToString("0.##")/@attempt.Quiz?.TotalMarks</td></tr> }
+          @if (!Model.QuizAttempts.Any()) { <tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">No quiz attempts yet.</td></tr> }
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</div>

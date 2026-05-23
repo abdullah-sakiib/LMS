@@ -1,0 +1,88 @@
+﻿@model LMS.ViewModels.DashboardVM
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<!-- Welcome Banner -->
+<div class="bg-white rounded-2xl p-6 mb-6 flex items-center justify-between shadow-sm">
+    <div>
+        <p class="text-gray-400 text-sm">Welcome back,</p>
+        <h2 class="text-2xl font-bold text-gray-800">@Model.FullName 👋</h2>
+        <span class="text-xs bg-orange-100 text-orange-500 font-medium px-3 py-1 rounded-full mt-1 inline-block">
+            @Model.Role
+        </span>
+    </div>
+    <div class="text-5xl">🎓</div>
+</div>
+
+<!-- Stats Row -->
+@if (Model.Role == "Student")
+{
+    <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <p class="text-gray-400 text-sm">Enrolled Courses</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">@Model.EnrolledCourses</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <p class="text-gray-400 text-sm">Pending Assignments</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">@Model.PendingAssignments</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <p class="text-gray-400 text-sm">Quizzes Completed</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">@Model.CompletedQuizzes</p>
+        </div>
+    </div>
+}
+else if (Model.Role == "Instructor")
+{
+    <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <p class="text-gray-400 text-sm">My Courses</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">@Model.TotalCourses</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <p class="text-gray-400 text-sm">Total Students</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">@Model.TotalStudents</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <p class="text-gray-400 text-sm">Pending Submissions</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">@Model.PendingSubmissions</p>
+        </div>
+    </div>
+}
+else if (Model.Role == "Admin")
+{
+    <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <p class="text-gray-400 text-sm">Total Users</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">@Model.TotalUsers</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <p class="text-gray-400 text-sm">Total Courses</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">@Model.TotalCoursesAll</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm">
+            <p class="text-gray-400 text-sm">Total Enrollments</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">@Model.TotalEnrollments</p>
+        </div>
+    </div>
+}
+
+<!-- Quick Actions -->
+<div class="bg-white rounded-2xl p-6 shadow-sm">
+    <h3 class="text-md font-semibold text-gray-700 mb-4">Quick Actions</h3>
+    <div class="flex gap-3">
+        @if (Model.Role == "Instructor" || Model.Role == "Admin")
+        {
+            <a asp-controller="Course" asp-action="Create"
+               class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
+                + New Course
+            </a>
+        }
+        <a asp-controller="Course" asp-action="Index"
+           class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition">
+            Browse Courses
+        </a>
+    </div>
+</div>

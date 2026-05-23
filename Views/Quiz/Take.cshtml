@@ -1,0 +1,86 @@
+@model LMS.ViewModels.QuizTakeVM
+@{
+    var quiz = Model.Quiz;
+    var questions = quiz.Questions.OrderBy(question => question.Order).ToList();
+    ViewData["Title"] = "Take Quiz - EduFlow";
+    ViewData["PageTitle"] = quiz.Title;
+    ViewData["PageSubtitle"] = quiz.Course?.Title;
+}
+<style>
+  .quiz-option { transition:all .2s ease; cursor:pointer; }
+  .quiz-option:hover { border-color:#a5b4fc; background:#f5f3ff; }
+  .quiz-option:has(input:checked) { border-color:#4f46e5; background:#eef2ff; }
+  .quiz-option.correct { border-color:#22c55e; background:#f0fdf4; }
+  .quiz-option.wrong { border-color:#ef4444; background:#fef2f2; }
+</style>
+<div class="max-w-4xl mx-auto space-y-5">
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div><h2 class="text-lg font-bold text-slate-800">@quiz.Title</h2><p class="text-sm text-slate-500">@quiz.Course?.Title &middot; @questions.Count questions &middot; @quiz.TotalMarks marks</p></div>
+      <div class="flex items-center gap-3"><span id="timer" class="text-sm font-bold text-indigo-600"></span><a asp-action="Index" class="text-sm font-medium text-slate-600 border border-slate-200 px-4 py-2 rounded-xl">Back to quizzes</a></div>
+    </div>
+  </div>
+  @if (Model.IsSubmitted)
+  {
+    <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
+      <p class="text-emerald-700 font-semibold text-sm">Submitted</p>
+      <p class="text-emerald-700 text-sm mt-1">Score: @Model.Attempt!.Score.ToString("0.##")/@quiz.TotalMarks</p>
+      <p class="text-emerald-700 text-xs mt-1">Submitted at @Model.Attempt.SubmittedAt?.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</p>
+    </div>
+  }
+  <div id="quiz-form" class="space-y-4">
+    @for (var index = 0; index < questions.Count; index++)
+    {
+      var question = questions[index];
+      Model.Responses.TryGetValue(question.Id, out var response);
+      var points = questions.Count == 0 ? 0 : quiz.TotalMarks / (double)questions.Count;
+      <article class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5" data-question-id="@question.Id">
+        <div class="flex items-center justify-between gap-2 mb-3"><p class="text-sm font-semibold text-slate-800">Q@(index + 1). @question.QuestionText</p><span class="text-xs text-slate-500">@points.ToString("0.##") marks</span></div>
+        <div class="space-y-2">
+          @foreach (var option in question.Options)
+          {
+            var chosen = response?.SelectedOptionId == option.Id;
+            var reviewClass = Model.IsSubmitted && option.IsCorrect ? "correct" : Model.IsSubmitted && chosen && !option.IsCorrect ? "wrong" : "";
+            <label class="quiz-option @reviewClass flex items-center gap-3 p-3 border-2 border-slate-100 rounded-xl">
+              <input type="radio" name="q_@question.Id" value="@option.Id" checked="@chosen" disabled="@Model.IsSubmitted" class="accent-indigo-600" />
+              <span class="text-sm text-slate-700">@option.OptionText</span>
+            </label>
+          }
+        </div>
+        @if (Model.IsSubmitted)
+        {
+          var correctOption = question.Options.FirstOrDefault(option => option.IsCorrect);
+          <div class="mt-3 text-xs"><p class="@(response?.IsCorrect == true ? "text-emerald-600" : "text-red-500")">Your answer: @(response?.SelectedOption?.OptionText ?? "No answer")</p><p class="text-slate-500 mt-1">Correct answer: @(correctOption?.OptionText ?? "Not provided")</p><p class="text-slate-500 mt-1">Awarded: @(response?.AwardedMarks.ToString("0.##") ?? "0")</p></div>
+        }
+      </article>
+    }
+    @if (!Model.IsSubmitted) { <button type="button" onclick="submitQuiz()" class="w-full text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 py-3 rounded-xl">Submit Quiz</button> }
+  </div>
+</div>
+@if (!Model.IsSubmitted)
+{
+@section Scripts {
+<script>
+  const quizId = @quiz.Id;
+  let secondsLeft = @quiz.TimerMinutes * 60;
+  const timer = document.getElementById('timer');
+  function updateTimer() {
+    const minutes = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+    const seconds = String(secondsLeft % 60).padStart(2, '0');
+    timer.textContent = `${minutes}:${seconds}`;
+  }
+  updateTimer();
+  const interval = setInterval(() => { secondsLeft -= 1; updateTimer(); if (secondsLeft <= 0) { clearInterval(interval); submitQuiz(); } }, 1000);
+  async function submitQuiz() {
+    clearInterval(interval);
+    const answers = {};
+    document.querySelectorAll('[data-question-id]').forEach(card => {
+      const selected = card.querySelector('input:checked');
+      if (selected) answers[card.dataset.questionId] = parseInt(selected.value);
+    });
+    const response = await fetch('/Quiz/Submit', { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ quizId, answers }) });
+    if (response.ok) location.reload(); else alert(await response.text());
+  }
+</script>
+}
+}

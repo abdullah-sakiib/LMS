@@ -1,0 +1,97 @@
+@model LMS.Models.Course
+@{
+    ViewData["Title"] = "Manage Content";
+    ViewData["PageTitle"] = "Manage Content";
+    ViewData["PageSubtitle"] = Model.Title;
+}
+<style>
+  .manage-input:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
+</style>
+<div class="max-w-6xl mx-auto space-y-6">
+  <div class="flex items-center justify-between gap-4">
+    <div><p class="text-xs uppercase tracking-[0.2em] font-semibold text-primary-600">Instructor Workspace</p><h2 class="text-2xl font-bold text-slate-800 mt-1">@Model.Title</h2><p class="text-sm text-slate-500">Build modules, upload learning materials, and manage assessment links.</p></div>
+    <a asp-controller="Course" asp-action="Index" class="inline-flex items-center gap-2 text-sm text-slate-600 border border-slate-200 px-4 py-2 rounded-xl"><i class="ri-arrow-left-line"></i> My Courses</a>
+  </div>
+  <div class="grid lg:grid-cols-3 gap-6">
+    <aside class="space-y-5">
+      <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <h3 class="font-semibold text-slate-800 mb-3">Course Settings</h3>
+        <p class="text-sm text-slate-500 mb-4">@Model.Description</p>
+        <div class="flex gap-2"><span class="text-xs px-2 py-1 rounded-full @(Model.Status == "Published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")">@Model.Status</span><span class="text-xs px-2 py-1 rounded-full bg-primary-50 text-primary-600">@Model.Capacity seats</span></div>
+        <a asp-controller="Course" asp-action="Edit" asp-route-id="@Model.Id" class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary-600"><i class="ri-edit-line"></i> Edit course settings</a>
+        @if (!Model.IsEnded)
+        {
+          <form asp-controller="Course" asp-action="EndCourse" asp-route-id="@Model.Id" method="post" class="mt-4" onsubmit="return confirm('End this course now? Students who finish every resource will be able to download certificates.');">
+            <button class="w-full px-3 py-2 rounded-xl border border-rose-200 text-rose-700 text-sm font-semibold hover:bg-rose-50">End Course</button>
+          </form>
+        }
+        else
+        {
+          <p class="mt-4 text-xs font-semibold text-rose-700 bg-rose-50 rounded-lg p-2">Ended @Model.EndedAt?.ToString("MMM dd, yyyy")</p>
+        }
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <h3 class="font-semibold text-slate-800 mb-4">Assessments</h3>
+        <div class="grid gap-2">
+          <a asp-controller="Assignment" asp-action="Index" asp-route-courseId="@Model.Id" class="flex items-center justify-between p-3 rounded-xl bg-violet-50 text-violet-700 text-sm font-medium"><span><i class="ri-file-list-3-line mr-2"></i>Assignments</span><i class="ri-arrow-right-s-line"></i></a>
+          <a asp-controller="Quiz" asp-action="Index" asp-route-courseId="@Model.Id" class="flex items-center justify-between p-3 rounded-xl bg-sky-50 text-sky-700 text-sm font-medium"><span><i class="ri-questionnaire-line mr-2"></i>Quizzes</span><i class="ri-arrow-right-s-line"></i></a>
+          <a asp-controller="Grade" asp-action="Book" asp-route-courseId="@Model.Id" class="flex items-center justify-between p-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-medium"><span><i class="ri-award-line mr-2"></i>Grade Book</span><i class="ri-arrow-right-s-line"></i></a>
+        </div>
+      </div>
+    </aside>
+    <section class="lg:col-span-2 space-y-5">
+      <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <h3 class="font-semibold text-slate-800 mb-4 flex items-center gap-2"><i class="ri-folder-add-line text-primary-600"></i> Add Module</h3>
+        <form asp-controller="Content" asp-action="AddModule" method="post" class="flex gap-3">
+          <input type="hidden" name="courseId" value="@Model.Id" />
+          <input type="text" name="title" placeholder="Module title" class="manage-input flex-1 border border-slate-200 bg-slate-50 rounded-xl px-4 py-2.5 text-sm" required />
+          <button type="submit" class="bg-primary-600 text-white text-sm font-semibold px-4 py-2 rounded-xl">Add Module</button>
+        </form>
+      </div>
+      @foreach (var module in Model.Modules.OrderBy(m => m.Order))
+      {
+        <article class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div><h4 class="font-semibold text-slate-800">@module.Title</h4><p class="text-xs text-slate-500 mt-1">@module.ContentItems.Count learning resources</p></div>
+            <form asp-controller="Content" asp-action="DeleteModule" method="post" onsubmit="return confirm('Delete this module and all its content?')"><input type="hidden" name="moduleId" value="@module.Id" /><input type="hidden" name="courseId" value="@Model.Id" /><button class="text-red-500 text-xs font-medium"><i class="ri-delete-bin-line"></i> Delete</button></form>
+          </div>
+          @if (module.ContentItems.Any())
+          {
+            <div class="space-y-2 mb-5">
+              @foreach (var item in module.ContentItems.OrderBy(c => c.Order))
+              {
+                <div class="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
+                  <a asp-controller="Content" asp-action="View" asp-route-id="@item.Id" class="text-sm text-slate-700 hover:text-primary-600"><i class="@(item.Type == "Video" ? "ri-video-line text-sky-500" : item.Type == "PDF" ? "ri-file-pdf-line text-red-500" : "ri-file-text-line text-primary-500") mr-2"></i>@item.Title</a>
+                  <form asp-controller="Content" asp-action="DeleteContent" method="post"><input type="hidden" name="contentId" value="@item.Id" /><input type="hidden" name="courseId" value="@Model.Id" /><button type="submit" class="text-xs text-red-400">Remove</button></form>
+                </div>
+              }
+            </div>
+          }
+          <form asp-controller="Content" asp-action="AddContent" method="post" enctype="multipart/form-data" class="border-t border-slate-100 pt-4 space-y-3">
+            <input type="hidden" name="moduleId" value="@module.Id" /><input type="hidden" name="courseId" value="@Model.Id" />
+            <div class="flex gap-3"><input type="text" name="title" placeholder="Resource title" class="manage-input flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm" required /><select name="type" id="type-@module.Id" onchange="toggleContentInput(@module.Id, this.value)" class="border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="Lecture">Lecture</option><option value="PDF">PDF</option><option value="Video">Video URL</option></select></div>
+            <textarea id="lecture-@module.Id" name="textContent" rows="3" placeholder="Lecture content..." class="manage-input w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></textarea>
+            <input id="pdf-@module.Id" disabled type="file" name="file" accept=".pdf" class="hidden w-full text-sm text-slate-500" />
+            <input id="video-@module.Id" disabled type="url" name="textContent" placeholder="Video URL" class="hidden manage-input w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
+            <button type="submit" class="text-sm font-semibold text-white bg-slate-800 px-4 py-2 rounded-xl"><i class="ri-add-line"></i> Add Resource</button>
+          </form>
+        </article>
+      }
+      @if (!Model.Modules.Any()) { <div class="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-500">No modules yet. Add a module to start uploading content.</div> }
+    </section>
+  </div>
+</div>
+@section Scripts {
+<script>
+  function toggleContentInput(moduleId, type) {
+    ['lecture-', 'pdf-', 'video-'].forEach(prefix => {
+      const field = document.getElementById(prefix + moduleId);
+      field.classList.add('hidden');
+      field.disabled = true;
+    });
+    const field = document.getElementById((type === 'PDF' ? 'pdf-' : type === 'Video' ? 'video-' : 'lecture-') + moduleId);
+    field.classList.remove('hidden');
+    field.disabled = false;
+  }
+</script>
+}

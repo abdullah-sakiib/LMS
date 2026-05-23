@@ -1,0 +1,98 @@
+@model LMS.ViewModels.InstructorSubmissionsVM
+@{
+    ViewData["Title"] = "Submissions";
+    ViewData["PageTitle"] = "Submissions";
+    ViewData["PageSubtitle"] = "Review and grade student work";
+}
+<style>
+  .input-field:focus, .grade-input:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.10); }
+  .sub-row { transition:background .15s ease; cursor:pointer; }
+  .sub-row:hover { background:#f8f7ff; }
+  .sub-row.selected { background:#eef2ff; border-left:3px solid #4f46e5; }
+  .badge-pending { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
+  .badge-graded { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+  .badge-late { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+  .filter-pill.active { background:#4f46e5; color:white; border-color:#4f46e5; }
+  .btn-primary { background:linear-gradient(135deg,#4f46e5,#6366f1); }
+</style>
+<div class="grid lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-5">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1"><i class="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i><input id="sub-search" type="text" oninput="filterSubs()" placeholder="Search by student name or assignment..." class="input-field w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"/></div>
+        <select id="course-filter" onchange="filterSubs()" class="input-field px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="">All courses</option>@foreach (var title in Model.CourseTitles) { <option value="@title.ToLowerInvariant()">@title</option> }</select>
+        <select id="status-filter" onchange="filterSubs()" class="input-field px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="">All statuses</option><option value="pending">Pending</option><option value="graded">Graded</option><option value="late">Late</option></select>
+      </div>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <button type="button" onclick="setStatus('')" class="filter-pill active text-xs font-semibold border border-slate-200 px-3 py-1.5 rounded-full" data-pill="">All <span class="ml-1">@Model.Submissions.Count</span></button>
+        <button type="button" onclick="setStatus('pending')" class="filter-pill text-xs font-semibold border border-slate-200 text-slate-600 px-3 py-1.5 rounded-full" data-pill="pending">Pending <span class="ml-1">@Model.Pending</span></button>
+        <button type="button" onclick="setStatus('graded')" class="filter-pill text-xs font-semibold border border-slate-200 text-slate-600 px-3 py-1.5 rounded-full" data-pill="graded">Graded <span class="ml-1">@Model.Graded</span></button>
+        <button type="button" onclick="setStatus('late')" class="filter-pill text-xs font-semibold border border-slate-200 text-slate-600 px-3 py-1.5 rounded-full" data-pill="late">Late <span class="ml-1">@Model.Late</span></button>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm"><thead><tr class="text-xs text-slate-400 font-semibold uppercase tracking-wide border-b border-slate-100 bg-slate-50/50"><th class="text-left px-5 py-3">Student</th><th class="text-left px-4 py-3">Assignment</th><th class="text-left px-4 py-3">Course</th><th class="text-left px-4 py-3">Status</th><th class="text-left px-4 py-3">Score</th></tr></thead>
+          <tbody class="divide-y divide-slate-50" id="sub-tbody">
+          @foreach (var submission in Model.Submissions)
+          {
+            var status = submission.Grade.HasValue ? "graded" : submission.Status.ToLowerInvariant() == "late" ? "late" : "pending";
+            <tr class="sub-row" data-status="@status" data-student="@submission.Student?.FullName" data-assignment="@submission.Assignment?.Title" data-course="@submission.Assignment?.Course?.Title" data-id="@submission.Id" data-file="@submission.FilePath" data-score="@submission.Grade" data-max="@submission.Assignment?.MaxScore" data-feedback="@submission.Feedback" onclick="openGrading(this)">
+              <td class="px-5 py-3.5"><p class="text-xs font-semibold text-slate-700">@submission.Student?.FullName</p><p class="text-xs text-slate-400">@submission.SubmittedAt.ToString("MMM d, yyyy HH:mm")</p></td>
+              <td class="px-4 py-3.5 text-xs font-medium text-slate-700">@submission.Assignment?.Title</td>
+              <td class="px-4 py-3.5"><span class="text-xs bg-indigo-50 text-indigo-600 font-medium px-2 py-0.5 rounded-full">@submission.Assignment?.Course?.Title</span></td>
+              <td class="px-4 py-3.5"><span class="badge-@status text-xs font-semibold px-2 py-0.5 rounded-full">@status</span></td>
+              <td class="px-4 py-3.5"><span class="text-xs font-bold text-emerald-600">@(submission.Grade.HasValue ? $"{submission.Grade:0.##}/{submission.Assignment?.MaxScore}" : "-")</span></td>
+            </tr>
+          }
+          @if (!Model.Submissions.Any()) { <tr><td colspan="5" class="px-5 py-8 text-center text-sm text-slate-500">No submissions available yet.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div id="grade-empty" class="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 text-center"><div class="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-3"><i class="ri-edit-box-line text-primary-400 text-2xl"></i></div><p class="font-semibold text-slate-700 text-sm">Select a submission</p><p class="text-xs text-slate-400 mt-1">Click any row to open the grading panel.</p></div>
+    <form asp-action="GradeSubmission" method="post" id="grade-form" class="hidden bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+      <input type="hidden" name="SubmissionId" id="grade-id" /><input type="hidden" name="ReturnToWorkspace" value="true" />
+      <h3 id="grade-student" class="font-semibold text-slate-800"></h3><p id="grade-assignment" class="text-xs text-slate-400 mb-4"></p>
+      <a id="grade-file" target="_blank" class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 mb-4 text-xs text-primary-600"><i class="ri-file-download-line text-lg"></i> Open submitted file</a>
+      <label id="grade-score-label" class="block text-xs font-semibold text-slate-600 uppercase mb-2">Score</label><input id="grade-score" name="Score" type="number" min="0" max="100" step=".5" required class="grade-input w-full px-3.5 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-lg font-bold mb-4" />
+      <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">Feedback</label><textarea id="grade-feedback" name="Feedback" rows="4" class="input-field w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm mb-4"></textarea>
+      <button type="submit" class="btn-primary w-full text-white font-semibold py-3 rounded-xl text-sm"><i class="ri-checkbox-circle-line"></i> Submit Grade</button>
+    </form>
+  </div>
+</div>
+@section Scripts {
+<script>
+  function openGrading(row) {
+    document.querySelectorAll('.sub-row').forEach(item => item.classList.remove('selected'));
+    row.classList.add('selected');
+    document.getElementById('grade-empty').classList.add('hidden');
+    document.getElementById('grade-form').classList.remove('hidden');
+    document.getElementById('grade-id').value = row.dataset.id;
+    document.getElementById('grade-student').textContent = row.dataset.student;
+    document.getElementById('grade-assignment').textContent = row.dataset.assignment + ' | ' + row.dataset.course;
+    document.getElementById('grade-file').href = row.dataset.file;
+    document.getElementById('grade-score').value = row.dataset.score || '';
+    document.getElementById('grade-score').max = row.dataset.max || '100';
+    document.getElementById('grade-score-label').textContent = 'Score / ' + (row.dataset.max || '100');
+    document.getElementById('grade-feedback').value = row.dataset.feedback || '';
+  }
+  function setStatus(status) {
+    document.getElementById('status-filter').value = status;
+    document.querySelectorAll('.filter-pill').forEach(pill => pill.classList.toggle('active', pill.dataset.pill === status));
+    filterSubs();
+  }
+  function filterSubs() {
+    const search = document.getElementById('sub-search').value.toLowerCase();
+    const course = document.getElementById('course-filter').value;
+    const status = document.getElementById('status-filter').value;
+    document.querySelectorAll('#sub-tbody .sub-row').forEach(row => {
+      const text = row.textContent.toLowerCase();
+      const matches = (!search || text.includes(search)) && (!course || row.dataset.course.toLowerCase() === course) && (!status || row.dataset.status === status);
+      row.style.display = matches ? '' : 'none';
+    });
+  }
+</script>
+}
